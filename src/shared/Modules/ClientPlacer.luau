@@ -10,9 +10,8 @@ local Camera = workspace.CurrentCamera
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Assets = Shared:WaitForChild("Assets")
 
-local PlacementValidator = require(Shared:WaitForChild("Modules"):WaitForChild("PlacementValidator"))
-
 local FurnitureFolder = Assets:WaitForChild("Furniture")
+local PlacementValidator = require(Shared:WaitForChild("Modules"):WaitForChild("PlacementValidator"))
 local Knit = require(ReplicatedStorage.Packages.Knit)
 
 local ClientPlacer = {}
@@ -33,12 +32,19 @@ function ClientPlacer.new(plot: Model)
 		Plot = plot,
 		Preview = nil,
 		BoxOutline = nil,
+		Rotation = 0,
 	}, ClientPlacer)
 
 	self:InitiateRenderPreview()
 	ContextActionService:BindAction("PLACE", function(...)
 		self:TryPlaceBlock(...)
 	end, false, Enum.UserInputType.MouseButton1)
+	ContextActionService:BindAction("DELETE", function(...)
+		self:TryDeleteBlock(...)
+	end, false, Enum.KeyCode.X)
+	ContextActionService:BindAction("ROTATE", function(...)
+		self:RotateBlock(...)
+	end, true, Enum.KeyCode.R)
 
 	return self
 end
@@ -58,6 +64,7 @@ function ClientPlacer:PreparePreviewModel(model: Model)
 	self.Preview = model:Clone()
 	self.BoxOutline = Instance.new("SelectionBox", self.Preview)
 	self.BoxOutline.Adornee = self.Preview
+	self.BoxOutline.LineThickness = 0.05
 
 	for _, part: BasePart in self.Preview:GetDescendants() do
 		if part:IsA("BasePart") and part.Transparency ~= 1 then
@@ -74,7 +81,7 @@ end
 function ClientPlacer:RenderPreview()
 	local cast = castMouse()
 	if cast and cast.Position then
-		local cframe = CFrame.new(cast.Position)
+		local cframe = CFrame.new(cast.Position) * CFrame.Angles(0, self.Rotation, 0)
 		self.Preview:PivotTo(cframe)
 
 		local size = self.Preview:GetExtentsSize()
@@ -97,6 +104,26 @@ function ClientPlacer:TryPlaceBlock(_, state, _)
 	end
 end
 
+function ClientPlacer:RotateBlock(_, state, _)
+	if state == Enum.UserInputState.Begin then
+		self.Rotation += math.pi / 2
+	end
+end
+
+function ClientPlacer:TryDeleteBlock(_, state, _)
+	if state == Enum.UserInputState.Begin then
+		local cast = castMouse()
+		if cast and cast.Instance then
+			local success = Knit.GetService("PlotService"):Delete(cast.Instance)
+			if success then
+				warn(`Successfully deleted object!`)
+			else
+				warn(`Could not delete object!`)
+			end
+		end
+	end
+end
+
 function ClientPlacer:Destroy()
 	if self.Preview then
 		self.Preview:Destroy()
@@ -106,6 +133,8 @@ function ClientPlacer:Destroy()
 	end
 	RunService:UnbindFromRenderStep("PREVIEW_RENDER")
 	ContextActionService:UnbindAction("PLACE")
+	ContextActionService:UnbindAction("DELETE")
+	ContextActionService:UnbindAction("ROTATE")
 end
 
 -- // Return \\ --

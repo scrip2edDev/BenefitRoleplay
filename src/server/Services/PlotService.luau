@@ -1,3 +1,8 @@
+type ObjectInfo = {
+	Name: string,
+	Cframe: { number },
+}
+
 -- // Variables \\ --
 
 local Players = game:GetService("Players")
@@ -6,7 +11,10 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local PlotsFolder = workspace:WaitForChild("Plots")
 local Assets = Shared:WaitForChild("Assets")
+local Modules = Shared:WaitForChild("Modules")
 
+local Knit = require(ReplicatedStorage.Packages.Knit)
+local PlacementValidator = require(Modules:WaitForChild("PlacementValidator"))
 local FurnitureFolder = Assets:WaitForChild("Furniture")
 
 local plotSpawns = PlotsFolder:WaitForChild("PlotSpawns")
@@ -14,7 +22,6 @@ local allPlots = plotSpawns:GetChildren()
 
 local plots: { Model } = {}
 local usedplots: { BasePart } = {}
-local Knit = require(ReplicatedStorage.Packages.Knit)
 
 local PlotService = Knit.CreateService({
 	Name = "PlotService",
@@ -22,6 +29,26 @@ local PlotService = Knit.CreateService({
 })
 
 -- // Functions \\ --
+
+function PlotService.serializePlot(plot: Model)
+	local data = {}
+	local objectsFolder = plot:FindFirstChild("Objects")
+	if not objectsFolder then
+		return data
+	end
+
+	for _, object in objectsFolder:GetChildren() do
+		if object:IsA("Model") or object:IsA("BasePart") then
+			local objectCFrame = plot:GetPivot():ToObjectSpace(object:GetPivot())
+			local info: ObjectInfo = {
+				Name = object.Name,
+				Cframe = table.pack(objectCFrame:GetComponents()),
+			}
+			table.insert(data, info)
+		end
+	end
+	return data
+end
 
 function PlotService.GetAvailablePlot(player: Player): BasePart
 	local plotSpawn = table.remove(allPlots)
@@ -55,9 +82,32 @@ function PlotService.Place(player: Player, name: string, targetCFrame: CFrame): 
 	if not object or not plot then
 		return false
 	end
+	local objectSize = object:GetExtentsSize()
+
+	if
+		not PlacementValidator:WithinBounds(plot, objectSize, targetCFrame)
+		or not PlacementValidator:NotIntersectingObjects(plot, objectSize, targetCFrame)
+	then
+		return false
+	end
+
 	local newObject = object:Clone()
 	newObject:PivotTo(targetCFrame)
 	newObject.Parent = plot.Objects
+	return true
+end
+
+function PlotService.Delete(player: Player, object: Part): boolean
+	local plot = PlotService.GetPlot(player)
+	if not plot or not object or not object:IsDescendantOf(plot.Objects) then
+		return false
+	end
+
+	local actualObject = object
+	while actualObject.Parent ~= plot.Objects do
+		actualObject = actualObject:FindFirstAncestorWhichIsA("Model")
+	end
+	actualObject:Destroy()
 	return true
 end
 
@@ -65,16 +115,32 @@ function PlotService.GetPlot(player: Player): Model | nil
 	return plots[player.UserId]
 end
 
-function PlotService.Client.GetPlot(player: Player): Model | nil
+function PlotService.Client.GetPlot(_, player: Player): Model | nil
 	return PlotService.GetPlot(player)
 end
 
-function PlotService.Client.Place(player: Player, name: string, targetCFrame: CFrame): boolean
+function PlotService.Client:Place(player: Player, name: string, targetCFrame: CFrame): boolean
 	return PlotService.Place(player, name, targetCFrame)
 end
 
+function PlotService.Client:Delete(player: Player, object: Part): boolean
+	return PlotService.Delete(player, object)
+end
+
 function PlotService:KnitStart()
-	Players.PlayerAdded:Connect(self.SpawnPlot)
+	Players.PlayerAdded:Connect(function(player: Player)
+		local plot = PlotService.SpawnPlot(player)
+		task.wait(20)
+		local profile = Knit.GetService("PlayerData"):GetProfile(player)
+		if profile and profile.PlayerBuildData then
+			for _, objectInfo in profile.PlayerBuildData do
+				local object = FurnitureFolder[objectInfo.Name]:Clone()
+				local relativeCFrame = CFrame.new(table.unpack(objectInfo.Cframe))
+				object:PivotTo(plot:GetPivot():ToWorldSpace(relativeCFrame))
+				object.Parent = plot.Objects
+			end
+		end
+	end)
 end
 
 -- // Return \\ --

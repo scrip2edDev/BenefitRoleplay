@@ -19,7 +19,7 @@ local function setPlacementActive(_, state, _)
 	end
 
 	if not placer then
-		local plot = Knit.GetService("PlotService"):GetPlot()
+		local plot = Knit.GetService("PlotService").GetPlot()
 		placer = ClientPlacer.new(plot)
 	else
 		placer:Destroy()

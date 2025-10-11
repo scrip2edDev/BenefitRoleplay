@@ -6,7 +6,7 @@ local PlacementValidator = {}
 
 -- // Main \\ --
 
-function PlacementValidator:WithinBounds(_, plot: Model, objectSize: Vector3, worldCFrame: CFrame)
+function PlacementValidator:WithinBounds(plot: Model, objectSize: Vector3, worldCFrame: CFrame)
 	local plotCFrame, plotSize = plot:GetBoundingBox()
 	local objectCFrame = plotCFrame:ToObjectSpace(worldCFrame)
 
@@ -30,7 +30,7 @@ function PlacementValidator:WithinBounds(_, plot: Model, objectSize: Vector3, wo
 	return true
 end
 
-function PlacementValidator:NotIntersectingObjects(_, plot: Model, objectSize: Vector3, worldCFrame: CFrame)
+function PlacementValidator:NotIntersectingObjects(plot: Model, objectSize: Vector3, worldCFrame: CFrame)
 	local params = OverlapParams.new()
 	local objects = plot:FindFirstChild("Objects")
 	if objects then

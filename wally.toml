@@ -9,4 +9,4 @@ Cmdr = "evaera/cmdr@1.12.0"
 Knit = "sleitnick/knit@1.7.0"
 
 [server-dependencies]
-ProfileService = "firebird702/profileservice@1.1.0"
+ProfileStore = "vyon/profilestore@1.0.3"
