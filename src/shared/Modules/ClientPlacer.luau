@@ -27,12 +27,13 @@ end
 
 -- // Main \\ --
 
-function ClientPlacer.new(plot: Model)
+function ClientPlacer.new(plot: Model, item: Model)
 	local self = setmetatable({
 		Plot = plot,
 		Preview = nil,
 		BoxOutline = nil,
 		Rotation = 0,
+		Model = item,
 	}, ClientPlacer)
 
 	self:InitiateRenderPreview()
@@ -50,7 +51,7 @@ function ClientPlacer.new(plot: Model)
 end
 
 function ClientPlacer:InitiateRenderPreview()
-	self:PreparePreviewModel(FurnitureFolder["Dinner Table"])
+	self:PreparePreviewModel(self.Model)
 	RunService:BindToRenderStep("PREVIEW_RENDER", Enum.RenderPriority.Camera.Value, function(...)
 		self:RenderPreview(...)
 	end)

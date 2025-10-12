@@ -11,10 +11,23 @@ local ClientPlacer = require(Modules:WaitForChild("ClientPlacer"))
 local BuildClient = Knit.CreateController({ Name = "BuildClient" })
 local BuildMode_Template = Assets:WaitForChild("BuildMode")
 
+local BuildMode_Config = require(Modules:WaitForChild("Build_Mode_Config"))
+
 local placer = nil
 local BuildModeUi = nil
 
 -- // Functions \\ --
+
+local function loadGuiItems()
+	local Decorating = BuildModeUi:WaitForChild("Decorating")
+	for CategoryName, CategoryData in pairs(BuildMode_Config.Categories) do
+		local Category: TextButton = Decorating.Categories.Template:Clone()
+		Category.Parent = Decorating.Categories.ScrollingFrame
+		Category.Visible = true
+		Category.Name = CategoryName
+		Category.Text = CategoryName
+	end
+end
 
 local function setPlacementActive(_, state, _)
 	if state ~= Enum.UserInputState.Begin then
@@ -22,12 +35,13 @@ local function setPlacementActive(_, state, _)
 	end
 
 	if not placer then
-		local plot = Knit.GetService("PlotService").GetPlot()
-		placer = ClientPlacer.new(plot)
+		--[[local plot = Knit.GetService("PlotService").GetPlot()
+		--placer = ClientPlacer.new(plot)]]
+		loadGuiItems()
 		BuildModeUi.Decorating.Visible = true
 	else
-		placer:Destroy()
-		placer = nil
+		--[[placer:Destroy()
+		placer = nil]]
 		BuildModeUi.Decorating.Visible = false
 	end
 end
