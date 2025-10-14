@@ -80,20 +80,31 @@ function PlotService.Place(player: Player, name: string, targetCFrame: CFrame): 
 	local plot = PlotService.GetPlot(player)
 
 	if not object or not plot then
+		warn(`{name} - could not be placed because object or plot is nil! Plot: {plot} Object: {object}`)
 		return false
 	end
+
 	local objectSize = object:GetExtentsSize()
 
-	if
-		not PlacementValidator:WithinBounds(plot, objectSize, targetCFrame)
-		or not PlacementValidator:NotIntersectingObjects(plot, objectSize, targetCFrame)
-	then
+	if not PlacementValidator:WithinBounds(plot, objectSize, targetCFrame) then
+		warn(`{name} - could not be placed because it is not within bounds`)
+		return false
+	end
+	if not PlacementValidator:IsSupported(plot, objectSize, targetCFrame) then
+		warn(`{name} - could not be placed because it is not supported (floating in air)`)
 		return false
 	end
 
 	local newObject = object:Clone()
+
 	newObject:PivotTo(targetCFrame)
 	newObject.Parent = plot.Objects
+
+	local cameraPoint = newObject:FindFirstChild("CameraPoint")
+	if cameraPoint then
+		cameraPoint:Destroy()
+	end
+
 	return true
 end
 
@@ -106,6 +117,9 @@ function PlotService.Delete(player: Player, object: Part): boolean
 	local actualObject = object
 	while actualObject.Parent ~= plot.Objects do
 		actualObject = actualObject:FindFirstAncestorWhichIsA("Model")
+		if not actualObject then
+			return false
+		end
 	end
 	actualObject:Destroy()
 	return true
@@ -129,16 +143,38 @@ end
 
 function PlotService:KnitStart()
 	Players.PlayerAdded:Connect(function(player: Player)
+		repeat
+			task.wait()
+		until Knit.GetService("PlayerData"):GetProfile(player) ~= nil
 		local plot = PlotService.SpawnPlot(player)
-		task.wait(20)
 		local profile = Knit.GetService("PlayerData"):GetProfile(player)
 		if profile and profile.PlayerBuildData then
 			for _, objectInfo in profile.PlayerBuildData do
-				local object = FurnitureFolder[objectInfo.Name]:Clone()
-				local relativeCFrame = CFrame.new(table.unpack(objectInfo.Cframe))
-				object:PivotTo(plot:GetPivot():ToWorldSpace(relativeCFrame))
-				object.Parent = plot.Objects
+				local object = FurnitureFolder:FindFirstChild(objectInfo.Name)
+				if object then
+					local objectClone = object:Clone()
+					local relativeCFrame = CFrame.new(table.unpack(objectInfo.Cframe))
+
+					objectClone:PivotTo(plot:GetPivot():ToWorldSpace(relativeCFrame))
+					objectClone.Parent = plot.Objects
+
+					local cameraPoint = objectClone:FindFirstChild("CameraPoint")
+					if cameraPoint then
+						cameraPoint:Destroy()
+					end
+				else
+					warn(`Could not find furniture: {objectInfo.Name}`)
+				end
 			end
+		end
+	end)
+
+	Players.PlayerRemoving:Connect(function(player: Player)
+		PlotService.ReturnAvailablePlot(player)
+		local plot = plots[player.UserId]
+		if plot then
+			plot:Destroy()
+			plots[player.UserId] = nil
 		end
 	end)
 end

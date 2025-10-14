@@ -1,141 +1,191 @@
 -- // Variables \\ --
 
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local ContextActionService = game:GetService("ContextActionService")
-
-local Camera = workspace.CurrentCamera
-local Shared = ReplicatedStorage:WaitForChild("Shared")
-local Assets = Shared:WaitForChild("Assets")
-
-local FurnitureFolder = Assets:WaitForChild("Furniture")
-local PlacementValidator = require(Shared:WaitForChild("Modules"):WaitForChild("PlacementValidator"))
+local Modules = ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Modules")
 local Knit = require(ReplicatedStorage.Packages.Knit)
+local PlacementValidator = require(Modules:WaitForChild("PlacementValidator"))
 
 local ClientPlacer = {}
 ClientPlacer.__index = ClientPlacer
 
 -- // Functions \\ --
 
-local function castMouse()
-	local mouseLocation = UserInputService:GetMouseLocation()
-	local ray = Camera:ViewportPointToRay(mouseLocation.X, mouseLocation.Y)
-	return workspace:Raycast(ray.Origin, ray.Direction * 1000)
-end
+function ClientPlacer.new(plot: Model, object: Model, grid: number?, cancelCallback: () -> ())
+	local self = setmetatable({}, ClientPlacer)
 
--- // Main \\ --
+	self.plot = plot
+	self.object = object:Clone()
+	self.grid = grid or 0.5
+	self.rotation = 0
+	self.isPlacing = true
+	self.cancelCallback = cancelCallback
+	self.isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+	self.currentCFrame = nil
+	self.originalColors = {}
 
-function ClientPlacer.new(plot: Model, item: Model)
-	local self = setmetatable({
-		Plot = plot,
-		Preview = nil,
-		BoxOutline = nil,
-		Rotation = 0,
-		Model = item,
-	}, ClientPlacer)
+	self.object.Parent = workspace
 
-	self:InitiateRenderPreview()
-	ContextActionService:BindAction("PLACE", function(...)
-		self:TryPlaceBlock(...)
-	end, false, Enum.UserInputType.MouseButton1)
-	ContextActionService:BindAction("DELETE", function(...)
-		self:TryDeleteBlock(...)
-	end, false, Enum.KeyCode.X)
-	ContextActionService:BindAction("ROTATE", function(...)
-		self:RotateBlock(...)
-	end, true, Enum.KeyCode.R)
+	for _, part in self.object:GetDescendants() do
+		if part:IsA("BasePart") then
+			self.originalColors[part] = part.Color
+			part.Transparency = 0.5
+			part.CanCollide = false
+		end
+	end
+
+	local cameraPoint = self.object:FindFirstChild("CameraPoint")
+	if cameraPoint then
+		cameraPoint:Destroy()
+	end
+
+	self.renderConnection = RunService.RenderStepped:Connect(function()
+		self:Update()
+	end)
+
+	if not self.isMobile then
+		self.inputConnection = UserInputService.InputBegan:Connect(function(input, processed)
+			if processed then
+				return
+			end
+
+			if input.UserInputType == Enum.UserInputType.MouseButton1 then
+				self:Place()
+			elseif input.KeyCode == Enum.KeyCode.R then
+				self:Rotate(90)
+			elseif input.KeyCode == Enum.KeyCode.Q then
+				self:Rotate(-90)
+			elseif input.KeyCode == Enum.KeyCode.Escape or input.KeyCode == Enum.KeyCode.X then
+				self:Cancel()
+			end
+		end)
+	end
 
 	return self
 end
 
-function ClientPlacer:InitiateRenderPreview()
-	self:PreparePreviewModel(self.Model)
-	RunService:BindToRenderStep("PREVIEW_RENDER", Enum.RenderPriority.Camera.Value, function(...)
-		self:RenderPreview(...)
-	end)
-end
-
-function ClientPlacer:PreparePreviewModel(model: Model)
-	if self.Preview then
-		self.Preview:Destroy()
+function ClientPlacer:Update()
+	if not self.isPlacing then
+		return
 	end
 
-	self.Preview = model:Clone()
-	self.BoxOutline = Instance.new("SelectionBox", self.Preview)
-	self.BoxOutline.Adornee = self.Preview
-	self.BoxOutline.LineThickness = 0.05
+	local mouse = game.Players.LocalPlayer:GetMouse()
+	local camera = workspace.CurrentCamera
 
-	for _, part: BasePart in self.Preview:GetDescendants() do
-		if part:IsA("BasePart") and part.Transparency ~= 1 then
-			part.Transparency = 0.5
-			part.CanCollide = false
-			part.CanQuery = false
-			part.Anchored = true
+	local ray = camera:ScreenPointToRay(mouse.X, mouse.Y)
+	local params = RaycastParams.new()
+
+	local filterList = { self.plot }
+	local objects = self.plot:FindFirstChild("Objects")
+	if objects then
+		for _, obj in objects:GetChildren() do
+			table.insert(filterList, obj)
 		end
 	end
 
-	self.Preview.Parent = workspace
-end
+	table.insert(filterList, self.object)
+	params.FilterDescendantsInstances = filterList
+	params.FilterType = Enum.RaycastFilterType.Include
 
-function ClientPlacer:RenderPreview()
-	local cast = castMouse()
-	if cast and cast.Position then
-		local cframe = CFrame.new(cast.Position) * CFrame.Angles(0, self.Rotation, 0)
-		self.Preview:PivotTo(cframe)
+	local result = workspace:Raycast(ray.Origin, ray.Direction * 1000, params)
 
-		local size = self.Preview:GetExtentsSize()
-		self.BoxOutline.Color3 = if PlacementValidator:WithinBounds(self.Plot, size, cframe)
-				and PlacementValidator:NotIntersectingObjects(self.Plot, size, cframe)
-			then Color3.fromRGB(0, 255, 0)
-			else Color3.fromRGB(255, 0, 0)
-	end
-end
+	if result then
+		local hitPos = result.Position
+		local plotCFrame = self.plot:GetPivot()
+		local relativePos = plotCFrame:PointToObjectSpace(hitPos)
 
-function ClientPlacer:TryPlaceBlock(_, state, _)
-	if state ~= Enum.UserInputState.Begin then
-		return
-	end
-	local success = Knit.GetService("PlotService"):Place(self.Preview.Name, self.Preview:GetPivot())
-	if success then
-		warn(`Successfully placed {self.Preview.Name}!`)
-	else
-		warn(`Could not place {self.Preview.Name}!`)
-	end
-end
+		local snappedX = math.floor(relativePos.X / self.grid + 0.5) * self.grid
+		local snappedZ = math.floor(relativePos.Z / self.grid + 0.5) * self.grid
 
-function ClientPlacer:RotateBlock(_, state, _)
-	if state == Enum.UserInputState.Begin then
-		self.Rotation += math.pi / 2
-	end
-end
+		local surfaceHeight, hitInstance =
+			PlacementValidator:GetSurfaceHeight(self.plot, snappedX, snappedZ, hitPos.Y + 10)
 
-function ClientPlacer:TryDeleteBlock(_, state, _)
-	if state == Enum.UserInputState.Begin then
-		local cast = castMouse()
-		if cast and cast.Instance then
-			local success = Knit.GetService("PlotService"):Delete(cast.Instance)
-			if success then
-				warn(`Successfully deleted object!`)
-			else
-				warn(`Could not delete object!`)
+		if surfaceHeight then
+			-- Calculate object height offset
+			local objectSize = self.object:GetExtentsSize()
+			local yOffset = objectSize.Y / 2 + 0.05
+
+			local worldPos = plotCFrame:PointToWorldSpace(Vector3.new(snappedX, 0, snappedZ))
+			worldPos = Vector3.new(worldPos.X, surfaceHeight + yOffset, worldPos.Z)
+
+			local rotationCFrame = CFrame.Angles(0, math.rad(self.rotation), 0)
+			local finalCFrame = CFrame.new(worldPos) * rotationCFrame
+
+			self.object:PivotTo(finalCFrame)
+			self.currentCFrame = finalCFrame
+
+			local canPlace = PlacementValidator:WithinBounds(self.plot, objectSize, finalCFrame)
+				and PlacementValidator:IsSupported(self.plot, objectSize, finalCFrame)
+
+			for part, originalColor in pairs(self.originalColors) do
+				if part and part.Parent then
+					if canPlace then
+						part.Color = Color3.fromRGB(0, 255, 0)
+					else
+						part.Color = Color3.fromRGB(255, 0, 0)
+					end
+				end
 			end
 		end
 	end
 end
 
+function ClientPlacer:Rotate(angle: number)
+	self.rotation = (self.rotation + angle) % 360
+end
+
+function ClientPlacer:Place()
+	if not self.isPlacing or not self.currentCFrame then
+		return
+	end
+
+	local objectSize = self.object:GetExtentsSize()
+	local objectName = self.object.Name
+
+	if
+		PlacementValidator:WithinBounds(self.plot, objectSize, self.currentCFrame)
+		and PlacementValidator:IsSupported(self.plot, objectSize, self.currentCFrame)
+	then
+		local success = Knit.GetService("PlotService"):Place(objectName, self.currentCFrame)
+
+		if success then
+			if self.cancelCallback then
+				self.cancelCallback()
+			end
+			self:Destroy()
+		else
+			warn("Failed to place object on server")
+		end
+	else
+		warn("Cannot place object here - invalid position")
+	end
+end
+
+function ClientPlacer:Cancel()
+	if self.cancelCallback then
+		self.cancelCallback()
+	end
+	self:Destroy()
+end
+
 function ClientPlacer:Destroy()
-	if self.Preview then
-		self.Preview:Destroy()
+	self.isPlacing = false
+
+	if self.renderConnection then
+		self.renderConnection:Disconnect()
 	end
-	if self.BoxOutline then
-		self.BoxOutline:Destroy()
+
+	if self.inputConnection then
+		self.inputConnection:Disconnect()
 	end
-	RunService:UnbindFromRenderStep("PREVIEW_RENDER")
-	ContextActionService:UnbindAction("PLACE")
-	ContextActionService:UnbindAction("DELETE")
-	ContextActionService:UnbindAction("ROTATE")
+
+	if self.object then
+		self.object:Destroy()
+	end
+
+	self.originalColors = {}
 end
 
 -- // Return \\ --
