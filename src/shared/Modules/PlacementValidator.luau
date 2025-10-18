@@ -34,16 +34,23 @@ function PlacementValidator:IsSupported(plot: Model, objectSize: Vector3, worldC
 	params.FilterDescendantsInstances = filterList
 	params.FilterType = Enum.RaycastFilterType.Include
 
-	local rayOrigin = worldCFrame.Position
-	local rayDirection = Vector3.new(0, -objectSize.Y, 0)
+	local rayOrigin = worldCFrame.Position + Vector3.new(0, 0.5, 0)
+	local rayLength = objectSize.Y + 10
+	local rayDirection = Vector3.new(0, -rayLength, 0)
 
 	local result = workspace:Raycast(rayOrigin, rayDirection, params)
 
-	return result ~= nil
+	if result then
+		local distanceToSurface = math.abs(worldCFrame.Position.Y - result.Position.Y)
+		local expectedOffset = objectSize.Y / 2
+		return distanceToSurface <= expectedOffset + 0.1
+	end
+
+	return false
 end
 
 function PlacementValidator:GetSurfaceHeight(plot: Model, xPos: number, zPos: number, fromHeight: number)
-	fromHeight = fromHeight or 100
+	fromHeight = fromHeight or 200
 
 	local params = RaycastParams.new()
 	local objects = plot:FindFirstChild("Objects")
@@ -58,7 +65,7 @@ function PlacementValidator:GetSurfaceHeight(plot: Model, xPos: number, zPos: nu
 
 	local plotCFrame = plot:GetPivot()
 	local rayOrigin = plotCFrame.Position + Vector3.new(xPos, fromHeight, zPos)
-	local rayDirection = Vector3.new(0, -(fromHeight + 50), 0)
+	local rayDirection = Vector3.new(0, -(fromHeight + 100), 0)
 
 	local result = workspace:Raycast(rayOrigin, rayDirection, params)
 
@@ -66,7 +73,8 @@ function PlacementValidator:GetSurfaceHeight(plot: Model, xPos: number, zPos: nu
 		return result.Position.Y, result.Instance
 	end
 
-	return nil, nil
+	local plotCFrame, plotSize = plot:GetBoundingBox()
+	return plotCFrame.Position.Y - (plotSize.Y / 2), nil
 end
 
 function PlacementValidator:CanPlaceOnSurface(

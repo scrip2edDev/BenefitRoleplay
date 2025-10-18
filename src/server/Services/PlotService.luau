@@ -168,15 +168,6 @@ function PlotService:KnitStart()
 			end
 		end
 	end)
-
-	Players.PlayerRemoving:Connect(function(player: Player)
-		PlotService.ReturnAvailablePlot(player)
-		local plot = plots[player.UserId]
-		if plot then
-			plot:Destroy()
-			plots[player.UserId] = nil
-		end
-	end)
 end
 
 -- // Return \\ --

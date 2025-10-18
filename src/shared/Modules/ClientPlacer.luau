@@ -18,7 +18,7 @@ function ClientPlacer.new(plot: Model, object: Model, grid: number?, cancelCallb
 
 	self.plot = plot
 	self.object = object:Clone()
-	self.grid = grid or 0.5
+	self.grid = grid or 0.25
 	self.rotation = 0
 	self.isPlacing = true
 	self.cancelCallback = cancelCallback
@@ -54,9 +54,9 @@ function ClientPlacer.new(plot: Model, object: Model, grid: number?, cancelCallb
 			if input.UserInputType == Enum.UserInputType.MouseButton1 then
 				self:Place()
 			elseif input.KeyCode == Enum.KeyCode.R then
-				self:Rotate(90)
+				self:Rotate(25)
 			elseif input.KeyCode == Enum.KeyCode.Q then
-				self:Rotate(-90)
+				self:Rotate(-25)
 			elseif input.KeyCode == Enum.KeyCode.Escape or input.KeyCode == Enum.KeyCode.X then
 				self:Cancel()
 			end
@@ -77,55 +77,67 @@ function ClientPlacer:Update()
 	local ray = camera:ScreenPointToRay(mouse.X, mouse.Y)
 	local params = RaycastParams.new()
 
-	local filterList = { self.plot }
-	local objects = self.plot:FindFirstChild("Objects")
-	if objects then
-		for _, obj in objects:GetChildren() do
-			table.insert(filterList, obj)
-		end
-	end
-
-	table.insert(filterList, self.object)
+	local filterList = { self.object }
 	params.FilterDescendantsInstances = filterList
-	params.FilterType = Enum.RaycastFilterType.Include
+	params.FilterType = Enum.RaycastFilterType.Exclude
 
 	local result = workspace:Raycast(ray.Origin, ray.Direction * 1000, params)
 
 	if result then
 		local hitPos = result.Position
+		local hitInstance = result.Instance
+
+		local isInPlot = false
+		local current = hitInstance
+		while current do
+			if current == self.plot then
+				isInPlot = true
+				break
+			end
+			current = current.Parent
+		end
+
+		if not isInPlot then
+			return
+		end
+
 		local plotCFrame = self.plot:GetPivot()
 		local relativePos = plotCFrame:PointToObjectSpace(hitPos)
 
 		local snappedX = math.floor(relativePos.X / self.grid + 0.5) * self.grid
 		local snappedZ = math.floor(relativePos.Z / self.grid + 0.5) * self.grid
 
-		local surfaceHeight, hitInstance =
-			PlacementValidator:GetSurfaceHeight(self.plot, snappedX, snappedZ, hitPos.Y + 10)
+		local primaryPart = self.object.PrimaryPart
+		if not primaryPart then
+			warn("Object has no PrimaryPart set!")
+			return
+		end
 
-		if surfaceHeight then
-			-- Calculate object height offset
-			local objectSize = self.object:GetExtentsSize()
-			local yOffset = objectSize.Y / 2 + 0.05
+		local objectPivot = self.object:GetPivot()
+		local primaryPartCFrame = primaryPart.CFrame
+		local primaryPartSize = primaryPart.Size
 
-			local worldPos = plotCFrame:PointToWorldSpace(Vector3.new(snappedX, 0, snappedZ))
-			worldPos = Vector3.new(worldPos.X, surfaceHeight + yOffset, worldPos.Z)
+		local pivotToPrimaryPart = objectPivot:ToObjectSpace(primaryPartCFrame)
+		local yOffset = pivotToPrimaryPart.Y - (primaryPartSize.Y / 2)
 
-			local rotationCFrame = CFrame.Angles(0, math.rad(self.rotation), 0)
-			local finalCFrame = CFrame.new(worldPos) * rotationCFrame
+		local worldPos = plotCFrame:PointToWorldSpace(Vector3.new(snappedX, relativePos.Y - yOffset, snappedZ))
 
-			self.object:PivotTo(finalCFrame)
-			self.currentCFrame = finalCFrame
+		local rotationCFrame = CFrame.Angles(0, math.rad(self.rotation), 0)
+		local finalCFrame = CFrame.new(worldPos) * rotationCFrame
 
-			local canPlace = PlacementValidator:WithinBounds(self.plot, objectSize, finalCFrame)
-				and PlacementValidator:IsSupported(self.plot, objectSize, finalCFrame)
+		self.object:PivotTo(finalCFrame)
+		self.currentCFrame = finalCFrame
 
-			for part, originalColor in pairs(self.originalColors) do
-				if part and part.Parent then
-					if canPlace then
-						part.Color = Color3.fromRGB(0, 255, 0)
-					else
-						part.Color = Color3.fromRGB(255, 0, 0)
-					end
+		local objectSize = self.object:GetExtentsSize()
+		local canPlace = PlacementValidator:WithinBounds(self.plot, objectSize, finalCFrame)
+			and PlacementValidator:IsSupported(self.plot, objectSize, finalCFrame)
+
+		for part, originalColor in pairs(self.originalColors) do
+			if part and part.Parent then
+				if canPlace then
+					part.Color = Color3.fromRGB(0, 255, 0)
+				else
+					part.Color = Color3.fromRGB(255, 0, 0)
 				end
 			end
 		end

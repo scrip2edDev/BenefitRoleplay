@@ -17,72 +17,129 @@ local placer = nil
 local BuildModeUi = nil
 local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 
+local selectedTool = ""
 local connections = {}
+
+local deleteToolActive = false
+local hoveredObject = nil
+local originalColors = {}
 
 -- // Functions \\ --
 
-local function setupMobileControls()
-	if not isMobile then
+local function resetHoveredObject()
+	if hoveredObject then
+		for part, color in pairs(originalColors) do
+			if part and part.Parent then
+				part.Color = color
+			end
+		end
+		originalColors = {}
+		hoveredObject = nil
+	end
+end
+
+local function highlightObject(object: Model | BasePart)
+	resetHoveredObject()
+	hoveredObject = object
+
+	local parts = {}
+	if object:IsA("Model") then
+		for _, part in object:GetDescendants() do
+			if part:IsA("BasePart") then
+				table.insert(parts, part)
+			end
+		end
+	elseif object:IsA("BasePart") then
+		table.insert(parts, object)
+	end
+
+	for _, part in parts do
+		originalColors[part] = part.Color
+		part.Color = Color3.fromRGB(255, 0, 0)
+	end
+end
+
+local function updateDeleteToolHover()
+	if not deleteToolActive then
 		return
 	end
 
-	if not BuildModeUi:FindFirstChild("MobileControls") then
-		local mobileControls = Instance.new("Frame")
-		mobileControls.Name = "MobileControls"
-		mobileControls.Size = UDim2.new(0, 200, 0, 60)
-		mobileControls.Position = UDim2.new(0.5, -100, 0.9, -30)
-		mobileControls.BackgroundTransparency = 1
-		mobileControls.Visible = false
-		mobileControls.ZIndex = 100
-		mobileControls.Parent = BuildModeUi
+	local mouse = game.Players.LocalPlayer:GetMouse()
+	local camera = workspace.CurrentCamera
+	local plot = Knit.GetService("PlotService"):GetPlot()
 
-		local rotateLeft = Instance.new("TextButton")
-		rotateLeft.Name = "RotateLeft"
-		rotateLeft.Size = UDim2.new(0, 50, 0, 50)
-		rotateLeft.Position = UDim2.new(0, 0, 0, 0)
-		rotateLeft.Text = "↺"
-		rotateLeft.TextSize = 24
-		rotateLeft.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-		rotateLeft.TextColor3 = Color3.fromRGB(255, 255, 255)
-		rotateLeft.BorderSizePixel = 2
-		rotateLeft.ZIndex = 11
-		rotateLeft.Parent = mobileControls
+	if not plot then
+		resetHoveredObject()
+		return
+	end
 
-		local rotateLeftCorner = Instance.new("UICorner")
-		rotateLeftCorner.CornerRadius = UDim.new(0, 8)
-		rotateLeftCorner.Parent = rotateLeft
+	local ray = camera:ScreenPointToRay(mouse.X, mouse.Y)
+	local params = RaycastParams.new()
+	params.FilterDescendantsInstances = {}
+	params.FilterType = Enum.RaycastFilterType.Include
 
-		local rotateRight = Instance.new("TextButton")
-		rotateRight.Name = "RotateRight"
-		rotateRight.Size = UDim2.new(0, 50, 0, 50)
-		rotateRight.Position = UDim2.new(0, 60, 0, 0)
-		rotateRight.Text = "↻"
-		rotateRight.TextSize = 24
-		rotateRight.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-		rotateRight.TextColor3 = Color3.fromRGB(255, 255, 255)
-		rotateRight.BorderSizePixel = 2
-		rotateRight.ZIndex = 11
-		rotateRight.Parent = mobileControls
+	local objectsFolder = plot:FindFirstChild("Objects")
+	if objectsFolder then
+		params.FilterDescendantsInstances = objectsFolder:GetDescendants()
+	end
 
-		local rotateRightCorner = Instance.new("UICorner")
-		rotateRightCorner.CornerRadius = UDim.new(0, 8)
-		rotateRightCorner.Parent = rotateRight
+	local result = workspace:Raycast(ray.Origin, ray.Direction * 1000, params)
 
-		local confirm = Instance.new("TextButton")
-		confirm.Name = "Confirm"
-		confirm.Size = UDim2.new(0, 50, 0, 50)
-		confirm.Position = UDim2.new(0, 120, 0, 0)
-		confirm.Text = "✓"
-		confirm.TextSize = 24
-		confirm.BackgroundColor3 = Color3.fromRGB(0, 170, 0)
-		confirm.TextColor3 = Color3.fromRGB(255, 255, 255)
-		confirm.BorderSizePixel = 2
-		confirm.ZIndex = 11
-		confirm.Parent = mobileControls
+	if result and result.Instance then
+		local hitPart = result.Instance
+		local objectToDelete = hitPart
 
-		local confirmCorner = Instance.new("UICorner")
-		confirmCorner.CornerRadius = UDim.new(0, 8)
-		confirmCorner.Parent = confirm
+		if objectsFolder then
+			while objectToDelete and objectToDelete.Parent ~= objectsFolder do
+				objectToDelete = objectToDelete.Parent
+			end
+		end
+
+		if objectToDelete and objectToDelete ~= hoveredObject then
+			highlightObject(objectToDelete)
+		end
+	else
+		resetHoveredObject()
+	end
+end
+
+local function startDeleteTool()
+	deleteToolActive = true
+	resetHoveredObject()
+
+	connections["DeleteHover"] = game:GetService("RunService").RenderStepped:Connect(function()
+		updateDeleteToolHover()
+	end)
+
+	connections["DeleteClick"] = UserInputService.InputBegan:Connect(function(input, processed)
+		if processed then
+			return
+		end
+
+		local validInput = input.UserInputType == Enum.UserInputType.MouseButton1
+			or (isMobile and input.UserInputType == Enum.UserInputType.Touch)
+
+		if validInput and hoveredObject then
+			local success = Knit.GetService("PlotService"):Delete(hoveredObject)
+			if success then
+				resetHoveredObject()
+			end
+		end
+	end)
+end
+
+local function stopDeleteTool()
+	deleteToolActive = false
+	resetHoveredObject()
+
+	if connections["DeleteHover"] then
+		connections["DeleteHover"]:Disconnect()
+		connections["DeleteHover"] = nil
+	end
+
+	if connections["DeleteClick"] then
+		connections["DeleteClick"]:Disconnect()
+		connections["DeleteClick"] = nil
 	end
 end
 
@@ -181,31 +238,68 @@ local function unloadGuiItems()
 	end
 end
 
+local function onToolChange(newTool: string?)
+	if placer ~= nil then
+		placer:Destroy()
+		placer = nil
+	end
+
+	if deleteToolActive then
+		stopDeleteTool()
+	end
+
+	BuildModeUi.Decorating.Visible = false
+	BuildModeUi.Painting.Visible = false
+	BuildModeUi.ToolBar.Build.ImageColor3 = Color3.fromRGB(52, 52, 52)
+	BuildModeUi.ToolBar.Paint.ImageColor3 = Color3.fromRGB(52, 52, 52)
+	BuildModeUi.ToolBar.Delete.ImageColor3 = Color3.fromRGB(52, 52, 52)
+	selectedTool = newTool
+	unloadGuiItems()
+	if newTool == "Build" then
+		loadGuiItems()
+		BuildModeUi.Decorating.Visible = true
+		BuildModeUi.ToolBar.Build.ImageColor3 = Color3.fromRGB(255, 255, 255)
+	elseif newTool == "Paint" then
+		BuildModeUi.Painting.Visible = true
+		BuildModeUi.ToolBar.Paint.ImageColor3 = Color3.fromRGB(255, 255, 255)
+	elseif newTool == "Delete" then
+		BuildModeUi.ToolBar.Delete.ImageColor3 = Color3.fromRGB(255, 255, 255)
+		startDeleteTool()
+	end
+end
+
 -- // Main \\ --
 
 function BuildClient:KnitStart()
 	BuildModeUi = BuildMode_Template:Clone()
 	BuildModeUi.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
 
-	setupMobileControls()
-
-	BuildModeUi.BuildButton.MouseButton1Click:Connect(function()
-		if placer ~= nil then
-			placer:Destroy()
-			placer = nil
-			BuildModeUi.Decorating.Visible = true
+	BuildModeUi.ToolBar.Build.MouseButton1Click:Connect(function()
+		if BuildModeUi.Decorating.Visible == true then
+			onToolChange()
+		else
+			onToolChange("Build")
 		end
-		if BuildModeUi.Decorating.Visible == false then
-			loadGuiItems()
-			BuildModeUi.Decorating.Visible = true
+	end)
+
+	BuildModeUi.ToolBar.Paint.MouseButton1Click:Connect(function()
+		if BuildModeUi.Painting.Visible == true then
+			onToolChange()
+		else
+			onToolChange("Paint")
+		end
+	end)
+
+	BuildModeUi.ToolBar.Delete.MouseButton1Click:Connect(function()
+		if selectedTool == "Delete" then
+			onToolChange()
+		else
+			onToolChange("Delete")
 		end
 	end)
 
 	BuildModeUi.Decorating.Exit.MouseButton1Click:Connect(function()
-		if BuildModeUi.Decorating.Visible == true then
-			BuildModeUi.Decorating.Visible = false
-			unloadGuiItems()
-		end
+		onToolChange()
 	end)
 
 	BuildModeUi.Decorating.BuyFrame.BuyButton.MouseButton1Click:Connect(function()
@@ -219,14 +313,14 @@ function BuildClient:KnitStart()
 			BuildModeUi.Decorating.Visible = false
 			local plot = Knit.GetService("PlotService"):GetPlot()
 
-			if isMobile and BuildModeUi.Decorating:FindFirstChild("MobileControls") then
-				BuildModeUi.Decorating.MobileControls.Visible = true
+			if isMobile and BuildModeUi:FindFirstChild("MobileControls") then
+				BuildModeUi.MobileControls.Visible = true
 			end
 
 			placer = ClientPlacer.new(plot, ItemData.Model, nil, function()
 				BuildModeUi.Decorating.Visible = true
-				if BuildModeUi.Decorating:FindFirstChild("MobileControls") then
-					BuildModeUi.Decorating.MobileControls.Visible = false
+				if BuildModeUi:FindFirstChild("MobileControls") then
+					BuildModeUi.MobileControls.Visible = false
 				end
 				if placer then
 					placer:Destroy()
@@ -237,25 +331,16 @@ function BuildClient:KnitStart()
 			if isMobile and placer then
 				local mobileControls = BuildModeUi.MobileControls
 
-				if connections["RotateLeft"] then
-					connections["RotateLeft"]:Disconnect()
-				end
-				if connections["RotateRight"] then
-					connections["RotateRight"]:Disconnect()
+				if connections["Rotate"] then
+					connections["Rotate"]:Disconnect()
 				end
 				if connections["Confirm"] then
 					connections["Confirm"]:Disconnect()
 				end
 
-				connections["RotateLeft"] = mobileControls.RotateLeft.MouseButton1Click:Connect(function()
+				connections["Rotate"] = mobileControls.Rotate.MouseButton1Click:Connect(function()
 					if placer and placer.Rotate then
-						placer:Rotate(-90)
-					end
-				end)
-
-				connections["RotateRight"] = mobileControls.RotateRight.MouseButton1Click:Connect(function()
-					if placer and placer.Rotate then
-						placer:Rotate(90)
+						placer:Rotate(25)
 					end
 				end)
 

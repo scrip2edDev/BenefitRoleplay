@@ -49,12 +49,18 @@ function PlayerData:KnitStart()
 				local plot = PlotService.GetPlot(player)
 				if plot then
 					local plotData = PlotService.serializePlot(plot)
+					print(plotData)
 					profile["Data"].PlayerBuildData = plotData
-					plot:Destroy()
 				end
 
 				PlotService.ReturnAvailablePlot(player)
+				print(`{player.Name}'s Data:`)
+				print(profile["Data"])
 				Profiles[player] = nil
+
+				if plot then
+					plot:Destroy()
+				end
 
 				print(`Profile session ended for {player.Name}!`)
 				player:Kick("Profile session ended - Please rejoin")
@@ -63,6 +69,8 @@ function PlayerData:KnitStart()
 			if player.Parent == Players then
 				Profiles[player] = profile
 				print(`Profile loaded for {player.Name}!`)
+				print(`{player.Name}'s Data:`)
+				print(profile["Data"])
 			else
 				profile:EndSession()
 			end
