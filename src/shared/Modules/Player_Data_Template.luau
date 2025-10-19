@@ -1,4 +1,5 @@
 return {
-	Money = 0,
+	MoneyTransferCompleted = false,
+	Money = 350,
 	PlayerBuildData = {},
 }

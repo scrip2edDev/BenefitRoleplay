@@ -24,21 +24,28 @@ function ClientPlacer.new(plot: Model, object: Model, grid: number?, cancelCallb
 	self.cancelCallback = cancelCallback
 	self.isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 	self.currentCFrame = nil
+	self.selectionBox = nil
 
 	self.object.Parent = workspace
-
-	for _, part in self.object:GetDescendants() do
-		if part:IsA("BasePart") then
-			self.originalColors[part] = part.Color
-			part.Transparency = 0.5
-			part.CanCollide = false
-		end
-	end
 
 	local cameraPoint = self.object:FindFirstChild("CameraPoint")
 	if cameraPoint then
 		cameraPoint:Destroy()
 	end
+
+	for _, part in pairs(self.object:GetDescendants()) do
+		if part:IsA("BasePart") then
+			part.CanCollide = false
+			part.CanTouch = false
+		end
+	end
+
+	self.selectionBox = Instance.new("SelectionBox")
+	self.selectionBox.LineThickness = 0.05
+	self.selectionBox.Transparency = 0
+	self.selectionBox.Adornee = self.object
+	self.selectionBox.Parent = self.object
+	self.selectionBox.Color3 = Color3.fromRGB(255, 0, 0)
 
 	self.renderConnection = RunService.RenderStepped:Connect(function()
 		self:Update()
@@ -53,9 +60,9 @@ function ClientPlacer.new(plot: Model, object: Model, grid: number?, cancelCallb
 			if input.UserInputType == Enum.UserInputType.MouseButton1 then
 				self:Place()
 			elseif input.KeyCode == Enum.KeyCode.R then
-				self:Rotate(90)
+				self:Rotate(45)
 			elseif input.KeyCode == Enum.KeyCode.Q then
-				self:Rotate(-90)
+				self:Rotate(-45)
 			elseif input.KeyCode == Enum.KeyCode.Escape or input.KeyCode == Enum.KeyCode.X then
 				self:Cancel()
 			end
@@ -131,13 +138,11 @@ function ClientPlacer:Update()
 		local canPlace = PlacementValidator:WithinBounds(self.plot, objectSize, finalCFrame)
 			and PlacementValidator:IsSupported(self.plot, objectSize, finalCFrame)
 
-		for part, originalColor in pairs(self.originalColors) do
-			if part and part.Parent then
-				if canPlace then
-					part.Color = Color3.fromRGB(0, 255, 0)
-				else
-					part.Color = Color3.fromRGB(255, 0, 0)
-				end
+		if self.selectionBox then
+			if canPlace then
+				self.selectionBox.Color3 = Color3.fromRGB(0, 255, 0)
+			else
+				self.selectionBox.Color3 = Color3.fromRGB(255, 0, 0)
 			end
 		end
 	end
@@ -192,11 +197,14 @@ function ClientPlacer:Destroy()
 		self.inputConnection:Disconnect()
 	end
 
+	if self.selectionBox then
+		self.selectionBox:Destroy()
+		self.selectionBox = nil
+	end
+
 	if self.object then
 		self.object:Destroy()
 	end
-
-	self.originalColors = {}
 end
 
 -- // Return \\ --

@@ -324,7 +324,7 @@ function BuildClient:KnitStart()
 
 				connections["Rotate"] = mobileControls.Rotate.MouseButton1Click:Connect(function()
 					if placer and placer.Rotate then
-						placer:Rotate(90)
+						placer:Rotate(45)
 					end
 				end)
 

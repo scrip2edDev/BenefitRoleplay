@@ -32,6 +32,59 @@ function PlayerData:GetProfile(player: Player)
 	return nil
 end
 
+function PlayerData:ChangeData(player: Player, dataKey: string, operation: string, value: number)
+	local profile = Profiles[player]
+	if not profile then
+		warn(`Cannot change data for {player.Name}: Profile not found`)
+		return false
+	end
+
+	local data = profile["Data"]
+	if data[dataKey] == nil then
+		warn(`Cannot change data for {player.Name}: Data key "{dataKey}" does not exist`)
+		return false
+	end
+
+	local currentValue = data[dataKey]
+	if type(currentValue) ~= "number" then
+		warn(`Cannot change data for {player.Name}: Data key "{dataKey}" is not a number`)
+		return false
+	end
+
+	local newValue = currentValue
+
+	if operation == "add" then
+		newValue = currentValue + value
+	elseif operation == "subtract" then
+		newValue = currentValue - value
+	elseif operation == "multiply" then
+		newValue = currentValue * value
+	elseif operation == "divide" then
+		if value == 0 then
+			warn(`Cannot divide by zero for {player.Name}`)
+			return false
+		end
+		newValue = currentValue / value
+	elseif operation == "set" then
+		newValue = value
+	else
+		warn(`Invalid operation "{operation}" for {player.Name}`)
+		return false
+	end
+
+	data[dataKey] = newValue
+
+	local leaderstats = player:FindFirstChild("leaderstats")
+	if leaderstats then
+		local stat = leaderstats:FindFirstChild(dataKey)
+		if stat and (stat:IsA("IntValue") or stat:IsA("NumberValue")) then
+			stat.Value = newValue
+		end
+	end
+
+	return true
+end
+
 function PlayerData:KnitStart()
 	local function PlayerAdded(player)
 		local PlotService = Knit.GetService("PlotService")
@@ -46,14 +99,8 @@ function PlayerData:KnitStart()
 			profile:Reconcile()
 
 			profile.OnSessionEnd:Connect(function()
-				local plot = PlotService.GetPlot(player)
-				if plot then
-					local plotData = PlotService.serializePlot(plot)
-					print(plotData)
-					profile["Data"].PlayerBuildData = plotData
-				end
+				PlotService.UnclaimPlot(player)
 
-				PlotService.ReturnAvailablePlot(player)
 				print(`{player.Name}'s Data:`)
 				print(profile["Data"])
 				Profiles[player] = nil
@@ -67,6 +114,20 @@ function PlayerData:KnitStart()
 				print(`Profile loaded for {player.Name}!`)
 				print(`{player.Name}'s Data:`)
 				print(profile["Data"])
+
+				if profile["Data"].MoneyTransferCompleted == false then
+					local benefitsMoney = game:GetService("DataStoreService"):GetDataStore("BenefitsMoney")
+					local oldMoney = benefitsMoney:GetAsync(player.UserId)
+					profile["Data"].Money = oldMoney
+					profile["Data"].MoneyTransferCompleted = true
+				end
+
+				local leaderstats = Instance.new("Folder", player)
+				leaderstats.Name = "leaderstats"
+				local Money = Instance.new("IntValue", leaderstats)
+				Money.Name = "Money"
+				print(profile["Data"])
+				Money.Value = profile["Data"].Money
 			else
 				profile:EndSession()
 			end

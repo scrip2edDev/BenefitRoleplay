@@ -17,11 +17,14 @@ local Knit = require(ReplicatedStorage.Packages.Knit)
 local PlacementValidator = require(Modules:WaitForChild("PlacementValidator"))
 local FurnitureFolder = Assets:WaitForChild("Furniture")
 
+local Build_Mode_Config = require(Modules:WaitForChild("Build_Mode_Config"))
+
 local plotSpawns = PlotsFolder:WaitForChild("PlotSpawns")
 local allPlots = plotSpawns:GetChildren()
 
 local plots: { Model } = {}
-local usedplots: { BasePart } = {}
+local claimedPlots: { [BasePart]: Player } = {}
+local playerPlots: { [Player]: BasePart } = {}
 
 local PlotService = Knit.CreateService({
 	Name = "PlotService",
@@ -50,37 +53,26 @@ function PlotService.serializePlot(plot: Model)
 	return data
 end
 
-function PlotService.GetAvailablePlot(player: Player): BasePart
-	local plotSpawn = table.remove(allPlots)
-	usedplots[player.UserId] = plotSpawn
-	return plotSpawn
-end
-
-function PlotService.ReturnAvailablePlot(player: Player)
-	if not usedplots[player.UserId] then
-		return
-	end
-	table.insert(allPlots, usedplots[player.UserId])
-	usedplots[player.UserId] = nil
-end
-
 -- // Main \\ --
-
-function PlotService.SpawnPlot(player: Player): Model
-	local Plot = Assets.Plot_Template:Clone()
-	Plot.Name = `Plot_{player.Name}`
-	Plot.Parent = PlotsFolder
-	Plot:PivotTo(PlotService.GetAvailablePlot(player).CFrame)
-	plots[player.UserId] = Plot
-	return Plot
-end
 
 function PlotService.Place(player: Player, name: string, targetCFrame: CFrame): boolean
 	local object = FurnitureFolder:FindFirstChild(name)
+	local objectInConfig = Build_Mode_Config.Items[name]
 	local plot = PlotService.GetPlot(player)
 
-	if not object or not plot then
-		warn(`{name} - could not be placed because object or plot is nil! Plot: {plot} Object: {object}`)
+	if not object or not plot or not objectInConfig then
+		warn(
+			`{name} - could not be placed because object or plot is nil or object was not found in config! Plot: {plot} Object: {object} ObjectInConfig: {objectInConfig}`
+		)
+		return false
+	end
+
+	local playerDataService = Knit.GetService("PlayerData")
+	local PlayerData = playerDataService:GetProfile(player)
+
+	if PlayerData.Money >= objectInConfig.Price then
+	else
+		warn(`{player.Name} does not have enough money to buy {name}!`)
 		return false
 	end
 
@@ -105,11 +97,13 @@ function PlotService.Place(player: Player, name: string, targetCFrame: CFrame): 
 		cameraPoint:Destroy()
 	end
 
+	playerDataService:ChangeData(player, "Money", "subtract", objectInConfig.Price)
 	return true
 end
 
 function PlotService.Delete(player: Player, object: Part): boolean
 	local plot = PlotService.GetPlot(player)
+	local objectInConfig = Build_Mode_Config.Items[object.Name]
 	if not plot or not object or not object:IsDescendantOf(plot.Objects) then
 		return false
 	end
@@ -122,11 +116,120 @@ function PlotService.Delete(player: Player, object: Part): boolean
 		end
 	end
 	actualObject:Destroy()
+
+	local playerDataService = Knit.GetService("PlayerData")
+	playerDataService:ChangeData(player, "Money", "add", objectInConfig.Price)
+
 	return true
 end
 
 function PlotService.GetPlot(player: Player): Model | nil
 	return plots[player.UserId]
+end
+
+function PlotService.GetAvailablePlots(): { BasePart }
+	local availablePlots = {}
+	for _, plotSpawn in ipairs(allPlots) do
+		if not claimedPlots[plotSpawn] then
+			table.insert(availablePlots, plotSpawn)
+		end
+	end
+	return availablePlots
+end
+
+function PlotService.ClaimPlot(player: Player, plotSpawn: BasePart): boolean
+	if playerPlots[player] then
+		warn(`Player {player.Name} already has a claimed plot`)
+		return false
+	end
+
+	if claimedPlots[plotSpawn] then
+		warn(`Plot is already claimed by {claimedPlots[plotSpawn].Name}`)
+		return false
+	end
+
+	claimedPlots[plotSpawn] = player
+	playerPlots[player] = plotSpawn
+
+	local Plot = Assets.Plot_Template:Clone()
+	Plot.Name = `Plot_{player.Name}`
+	Plot.Parent = PlotsFolder
+	Plot:PivotTo(plotSpawn.CFrame)
+	plots[player.UserId] = Plot
+
+	local character = player.Character or player.CharacterAdded:Wait()
+	if character then
+		character.HumanoidRootPart.CFrame = Plot.PlotTeleport.CFrame
+	end
+
+	local profile = Knit.GetService("PlayerData"):GetProfile(player)
+	if profile and profile.PlayerBuildData then
+		for _, objectInfo in profile.PlayerBuildData do
+			local object = FurnitureFolder:FindFirstChild(objectInfo.Name)
+			if object then
+				local objectClone = object:Clone()
+				local relativeCFrame = CFrame.new(table.unpack(objectInfo.Cframe))
+
+				objectClone:PivotTo(Plot:GetPivot():ToWorldSpace(relativeCFrame))
+				objectClone.Parent = Plot.Objects
+
+				local cameraPoint = objectClone:FindFirstChild("CameraPoint")
+				if cameraPoint then
+					cameraPoint:Destroy()
+				end
+			else
+				warn(`Could not find furniture: {objectInfo.Name}`)
+			end
+		end
+	end
+
+	return true
+end
+
+function PlotService.UnclaimPlot(player: Player): boolean
+	local plotSpawn = playerPlots[player]
+	if not plotSpawn then
+		warn(`Player {player.Name} does not have a claimed plot`)
+		return false
+	end
+
+	local plot = plots[player.UserId]
+	if plot then
+		local profile = Knit.GetService("PlayerData"):GetProfile(player)
+		if profile then
+			profile.PlayerBuildData = PlotService.serializePlot(plot)
+		end
+		plot:Destroy()
+	end
+
+	claimedPlots[plotSpawn] = nil
+	playerPlots[player] = nil
+	plots[player.UserId] = nil
+
+	return true
+end
+
+function PlotService.ToggleHouseLock(player: Player)
+	local PlayerPlot = PlotService:GetPlot(player)
+	if PlayerPlot then
+		for _, Part in pairs(PlayerPlot:GetChildren()) do
+			if Part.Name == "LockableDoor" then
+				if Part.CanCollide == false then
+					Part.CanCollide = true
+				else
+					Part.CanCollide = false
+				end
+			end
+		end
+	end
+end
+
+function PlotService.TeleportHome(player: Player)
+	local PlayerPlot = PlotService:GetPlot(player)
+	if PlayerPlot then
+		local character = player.Character or player.CharacterAdded:Wait()
+		character.HumanoidRootPart.CFrame = PlayerPlot.PlotTeleport.CFrame
+	end
 end
 
 function PlotService.Client.GetPlot(_, player: Player): Model | nil
@@ -141,33 +244,36 @@ function PlotService.Client:Delete(player: Player, object: Part): boolean
 	return PlotService.Delete(player, object)
 end
 
-function PlotService:KnitStart()
-	Players.PlayerAdded:Connect(function(player: Player)
-		repeat
-			task.wait()
-		until Knit.GetService("PlayerData"):GetProfile(player) ~= nil
-		local plot = PlotService.SpawnPlot(player)
-		local profile = Knit.GetService("PlayerData"):GetProfile(player)
-		if profile and profile.PlayerBuildData then
-			for _, objectInfo in profile.PlayerBuildData do
-				local object = FurnitureFolder:FindFirstChild(objectInfo.Name)
-				if object then
-					local objectClone = object:Clone()
-					local relativeCFrame = CFrame.new(table.unpack(objectInfo.Cframe))
+function PlotService.Client:GetAvailablePlots(player: Player): { BasePart }
+	return PlotService.GetAvailablePlots()
+end
 
-					objectClone:PivotTo(plot:GetPivot():ToWorldSpace(relativeCFrame))
-					objectClone.Parent = plot.Objects
+function PlotService.Client:ClaimPlot(player: Player, plotSpawn: BasePart): boolean
+	return PlotService.ClaimPlot(player, plotSpawn)
+end
 
-					local cameraPoint = objectClone:FindFirstChild("CameraPoint")
-					if cameraPoint then
-						cameraPoint:Destroy()
-					end
-				else
-					warn(`Could not find furniture: {objectInfo.Name}`)
-				end
-			end
-		end
-	end)
+function PlotService.Client:UnclaimPlot(player: Player): boolean
+	return PlotService.UnclaimPlot(player)
+end
+
+function PlotService.Client:IsPlotClaimed(player: Player, plot: BasePart): boolean
+	if claimedPlots[plot] then
+		return true
+	else
+		return false
+	end
+end
+
+function PlotService.Client:HasPlot(player: Player): boolean
+	return playerPlots[player] ~= nil
+end
+
+function PlotService.Client:TeleportHome(player: Player)
+	return PlotService.TeleportHome(player)
+end
+
+function PlotService.Client:ToggleHouseLock(player: Player)
+	return PlotService.ToggleHouseLock(player)
 end
 
 -- // Return \\ --
