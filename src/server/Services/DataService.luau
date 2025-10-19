@@ -18,7 +18,7 @@ local PlayerData = Knit.CreateService({
 
 local PROFILE_TEMPLATE = require(Modules:WaitForChild("Player_Data_Template"))
 
-local DataKey = game:GetService("RunService"):IsStudio() and "Dev" or "Prod"
+local DataKey = game:GetService("RunService"):IsStudio() and "Dev2" or "Prod2"
 local PlayerStore = ProfileStore.New(DataKey, PROFILE_TEMPLATE)
 local Profiles: { [Player]: typeof(PlayerStore:StartSessionAsync()) } = {}
 
@@ -40,14 +40,36 @@ function PlayerData:ChangeData(player: Player, dataKey: string, operation: strin
 	end
 
 	local data = profile["Data"]
-	if data[dataKey] == nil then
+
+	local keys = string.split(dataKey, ".")
+	local currentTable = data
+	local finalKey = nil
+
+	for i, key in ipairs(keys) do
+		if i == #keys then
+			finalKey = key
+			break
+		else
+			if currentTable[key] == nil then
+				warn(`Cannot change data for {player.Name}: Path "{dataKey}" does not exist (missing "{key}")`)
+				return false
+			end
+			if type(currentTable[key]) ~= "table" then
+				warn(`Cannot change data for {player.Name}: "{key}" in path "{dataKey}" is not a table`)
+				return false
+			end
+			currentTable = currentTable[key]
+		end
+	end
+
+	if currentTable[finalKey] == nil then
 		warn(`Cannot change data for {player.Name}: Data key "{dataKey}" does not exist`)
 		return false
 	end
 
-	local currentValue = data[dataKey]
+	local currentValue = currentTable[finalKey]
 	if type(currentValue) ~= "number" then
-		warn(`Cannot change data for {player.Name}: Data key "{dataKey}" is not a number`)
+		warn(`Cannot change data for {player.Name}: Data key "{dataKey}" is not a number (type: {type(currentValue)})`)
 		return false
 	end
 
@@ -72,13 +94,15 @@ function PlayerData:ChangeData(player: Player, dataKey: string, operation: strin
 		return false
 	end
 
-	data[dataKey] = newValue
+	currentTable[finalKey] = newValue
 
-	local leaderstats = player:FindFirstChild("leaderstats")
-	if leaderstats then
-		local stat = leaderstats:FindFirstChild(dataKey)
-		if stat and (stat:IsA("IntValue") or stat:IsA("NumberValue")) then
-			stat.Value = newValue
+	if #keys == 1 then
+		local leaderstats = player:FindFirstChild("leaderstats")
+		if leaderstats then
+			local stat = leaderstats:FindFirstChild(finalKey)
+			if stat and (stat:IsA("IntValue") or stat:IsA("NumberValue")) then
+				stat.Value = newValue
+			end
 		end
 	end
 
@@ -114,20 +138,6 @@ function PlayerData:KnitStart()
 				print(`Profile loaded for {player.Name}!`)
 				print(`{player.Name}'s Data:`)
 				print(profile["Data"])
-
-				if profile["Data"].MoneyTransferCompleted == false then
-					local benefitsMoney = game:GetService("DataStoreService"):GetDataStore("BenefitsMoney")
-					local oldMoney = benefitsMoney:GetAsync(player.UserId)
-					profile["Data"].Money = oldMoney
-					profile["Data"].MoneyTransferCompleted = true
-				end
-
-				local leaderstats = Instance.new("Folder", player)
-				leaderstats.Name = "leaderstats"
-				local Money = Instance.new("IntValue", leaderstats)
-				Money.Name = "Money"
-				print(profile["Data"])
-				Money.Value = profile["Data"].Money
 			else
 				profile:EndSession()
 			end

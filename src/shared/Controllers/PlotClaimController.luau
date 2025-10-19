@@ -30,9 +30,6 @@ function PlotClaimController:UpdateClaimButtons()
 end
 
 function PlotClaimController:KnitStart()
-	repeat
-		task.wait()
-	until workspace:WaitForChild("Plots"):WaitForChild("PlotSpawns") ~= nil
 	local HouseClaiming = Assets:WaitForChild("HouseClaiming")
 	if HouseClaiming then
 		PlotClaimGui = HouseClaiming:Clone()
@@ -45,6 +42,9 @@ function PlotClaimController:KnitStart()
 					if response then
 						PlotClaimGui.Enabled = false
 						PlotClaimController:UpdateClaimButtons()
+						if Player.PlayerGui:FindFirstChild("BuildMode") then
+							Player.PlayerGui.BuildMode.Enabled = true
+						end
 					end
 				end)
 			end

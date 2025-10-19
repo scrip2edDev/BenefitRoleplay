@@ -22,7 +22,7 @@ return {
 			"Office Chair",
 		},
 		["Wall"] = {
-			"Dog Picture",
+			--[["Dog Picture",
 			"Duck Picture",
 			"Fancy Portraits",
 			"Flower Painting",
@@ -30,7 +30,7 @@ return {
 			"Round Painting",
 			"Shelf",
 			"XL Cool Picture",
-			"XL Picture",
+			"XL Picture",]]
 		},
 		["Decorations"] = {
 			"Air Freshner",
@@ -50,13 +50,13 @@ return {
 			"Bath & Shower",
 		},
 		["Electricals"] = {
-			"Grey Spike Light",
+			--"Grey Spike Light",
 			"Laptop",
 			"Large Lamp",
-			"Lamp",
+			--"Lamp",
 			"Light",
 			"TV",
-			"Yellow Spike Light",
+			--"Yellow Spike Light",
 		},
 		["Floor"] = {
 			"Welcome Rug",
@@ -164,7 +164,7 @@ return {
 		},
 
 		-- Wall
-		["Dog Picture"] = {
+		--[[["Dog Picture"] = {
 			Model = Furniture:WaitForChild("Dog Picture"),
 			Price = 125,
 		},
@@ -199,7 +199,7 @@ return {
 		["XL Cool Picture"] = {
 			Model = Furniture:WaitForChild("XL Cool Picture"),
 			Price = 75,
-		},
+		},]]
 
 		-- Decorations
 		["Air Freshner"] = {
@@ -258,10 +258,10 @@ return {
 		},
 
 		-- Electricals
-		["Grey Spike Light"] = {
+		--[[["Grey Spike Light"] = {
 			Model = Furniture:WaitForChild("Grey Spike Light"),
 			Price = 125,
-		},
+		},]]
 		["Laptop"] = {
 			Model = Furniture:WaitForChild("Laptop"),
 			Price = 100,
@@ -278,10 +278,10 @@ return {
 			Model = Furniture:WaitForChild("TV"),
 			Price = 50,
 		},
-		["Yellow Spike Light"] = {
+		--[[["Yellow Spike Light"] = {
 			Model = Furniture:WaitForChild("Yellow Spike Light"),
 			Price = 100,
-		},
+		},]]
 
 		-- Floor
 		["Welcome Rug"] = {
