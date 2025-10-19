@@ -71,10 +71,6 @@ return {
 		},
 		["Outside"] = {
 			"Garden Tree",
-			"Garden Bush 1",
-			"Garden Bush 2",
-			"Garden Bush 3",
-			"Garden Bush 4",
 			"Outside Bench",
 			"Grill",
 			"Green Bin",
@@ -320,26 +316,6 @@ return {
 		},
 
 		-- Outside
-		["Garden Tree"] = {
-			Model = Furniture:WaitForChild("Garden Tree"),
-			Price = 125,
-		},
-		["Garden Bush 1"] = {
-			Model = Furniture:WaitForChild("Garden Bush 1"),
-			Price = 100,
-		},
-		["Garden Bush 2"] = {
-			Model = Furniture:WaitForChild("Garden Bush 2"),
-			Price = 75,
-		},
-		["Garden Bush 3"] = {
-			Model = Furniture:WaitForChild("Garden Bush 3"),
-			Price = 75,
-		},
-		["Garden Bush 4"] = {
-			Model = Furniture:WaitForChild("Garden Bush 4"),
-			Price = 50,
-		},
 		["Outside Bench"] = {
 			Model = Furniture:WaitForChild("Outside Bench"),
 			Price = 100,

@@ -58,10 +58,6 @@ function PlayerData:KnitStart()
 				print(profile["Data"])
 				Profiles[player] = nil
 
-				if plot then
-					plot:Destroy()
-				end
-
 				print(`Profile session ended for {player.Name}!`)
 				player:Kick("Profile session ended - Please rejoin")
 			end)

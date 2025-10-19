@@ -24,7 +24,6 @@ function ClientPlacer.new(plot: Model, object: Model, grid: number?, cancelCallb
 	self.cancelCallback = cancelCallback
 	self.isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 	self.currentCFrame = nil
-	self.originalColors = {}
 
 	self.object.Parent = workspace
 
@@ -54,9 +53,9 @@ function ClientPlacer.new(plot: Model, object: Model, grid: number?, cancelCallb
 			if input.UserInputType == Enum.UserInputType.MouseButton1 then
 				self:Place()
 			elseif input.KeyCode == Enum.KeyCode.R then
-				self:Rotate(25)
+				self:Rotate(90)
 			elseif input.KeyCode == Enum.KeyCode.Q then
-				self:Rotate(-25)
+				self:Rotate(-90)
 			elseif input.KeyCode == Enum.KeyCode.Escape or input.KeyCode == Enum.KeyCode.X then
 				self:Cancel()
 			end

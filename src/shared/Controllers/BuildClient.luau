@@ -22,41 +22,27 @@ local connections = {}
 
 local deleteToolActive = false
 local hoveredObject = nil
-local originalColors = {}
 
 -- // Functions \\ --
 
 local function resetHoveredObject()
 	if hoveredObject then
-		for part, color in pairs(originalColors) do
-			if part and part.Parent then
-				part.Color = color
-			end
+		local selectionBox = hoveredObject:FindFirstChild("SelectionBox")
+		if selectionBox then
+			selectionBox:Destroy()
 		end
-		originalColors = {}
 		hoveredObject = nil
 	end
 end
 
 local function highlightObject(object: Model | BasePart)
 	resetHoveredObject()
+	local selectionBox: SelectionBox = Instance.new("SelectionBox")
+	selectionBox.Parent = object
+	selectionBox.Adornee = object
+	selectionBox.Color3 = Color3.new(0.909804, 0.082353, 0.082353)
+	selectionBox.LineThickness = 0.1
 	hoveredObject = object
-
-	local parts = {}
-	if object:IsA("Model") then
-		for _, part in object:GetDescendants() do
-			if part:IsA("BasePart") then
-				table.insert(parts, part)
-			end
-		end
-	elseif object:IsA("BasePart") then
-		table.insert(parts, object)
-	end
-
-	for _, part in parts do
-		originalColors[part] = part.Color
-		part.Color = Color3.fromRGB(255, 0, 0)
-	end
 end
 
 local function updateDeleteToolHover()
@@ -244,26 +230,24 @@ local function onToolChange(newTool: string?)
 		placer = nil
 	end
 
-	if deleteToolActive then
-		stopDeleteTool()
-	end
+	stopDeleteTool()
 
 	BuildModeUi.Decorating.Visible = false
 	BuildModeUi.Painting.Visible = false
-	BuildModeUi.ToolBar.Build.ImageColor3 = Color3.fromRGB(52, 52, 52)
-	BuildModeUi.ToolBar.Paint.ImageColor3 = Color3.fromRGB(52, 52, 52)
-	BuildModeUi.ToolBar.Delete.ImageColor3 = Color3.fromRGB(52, 52, 52)
+	BuildModeUi.ToolBar.Build.ImageColor3 = Color3.fromRGB(255, 255, 255)
+	BuildModeUi.ToolBar.Paint.ImageColor3 = Color3.fromRGB(255, 255, 255)
+	BuildModeUi.ToolBar.Delete.ImageColor3 = Color3.fromRGB(255, 255, 255)
 	selectedTool = newTool
 	unloadGuiItems()
 	if newTool == "Build" then
 		loadGuiItems()
 		BuildModeUi.Decorating.Visible = true
-		BuildModeUi.ToolBar.Build.ImageColor3 = Color3.fromRGB(255, 255, 255)
+		BuildModeUi.ToolBar.Build.ImageColor3 = Color3.fromRGB(52, 52, 52)
 	elseif newTool == "Paint" then
 		BuildModeUi.Painting.Visible = true
-		BuildModeUi.ToolBar.Paint.ImageColor3 = Color3.fromRGB(255, 255, 255)
+		BuildModeUi.ToolBar.Paint.ImageColor3 = Color3.fromRGB(52, 52, 52)
 	elseif newTool == "Delete" then
-		BuildModeUi.ToolBar.Delete.ImageColor3 = Color3.fromRGB(255, 255, 255)
+		BuildModeUi.ToolBar.Delete.ImageColor3 = Color3.fromRGB(52, 52, 52)
 		startDeleteTool()
 	end
 end
@@ -340,7 +324,7 @@ function BuildClient:KnitStart()
 
 				connections["Rotate"] = mobileControls.Rotate.MouseButton1Click:Connect(function()
 					if placer and placer.Rotate then
-						placer:Rotate(25)
+						placer:Rotate(90)
 					end
 				end)
 
