@@ -5,18 +5,16 @@ type ObjectInfo = {
 
 -- // Variables \\ --
 
-local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local PlotsFolder = workspace:WaitForChild("Plots")
+
 local Assets = Shared:WaitForChild("Assets")
 local Modules = Shared:WaitForChild("Modules")
-
 local Knit = require(ReplicatedStorage.Packages.Knit)
+
 local PlacementValidator = require(Modules:WaitForChild("PlacementValidator"))
 local FurnitureFolder = Assets:WaitForChild("Furniture")
-
 local Build_Mode_Config = require(Modules:WaitForChild("Build_Mode_Config"))
 
 local plotSpawns = PlotsFolder:WaitForChild("PlotSpawns")
