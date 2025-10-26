@@ -7,9 +7,11 @@ local Knit = require(ReplicatedStorage.Packages.Knit)
 local Modules = ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Modules")
 local Assets = ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Assets")
 
+local UI = Assets:WaitForChild("UI")
+
 local ClientPlacer = require(Modules:WaitForChild("ClientPlacer"))
 local BuildClient = Knit.CreateController({ Name = "BuildClient" })
-local BuildMode_Template = Assets:WaitForChild("BuildMode")
+local BuildMode_Template = UI:WaitForChild("BuildMode")
 
 local BuildMode_Config = require(Modules:WaitForChild("Build_Mode_Config"))
 
@@ -253,6 +255,12 @@ local function onToolChange(newTool: string?)
 end
 
 -- // Main \\ --
+
+function BuildClient:SetVisibility(SetVisibility: boolean)
+	if BuildModeUi then
+		BuildModeUi.Enabled = SetVisibility
+	end
+end
 
 function BuildClient:KnitStart()
 	BuildModeUi = BuildMode_Template:Clone()

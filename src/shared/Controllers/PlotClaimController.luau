@@ -4,6 +4,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Assets = Shared:WaitForChild("Assets")
 
+local UI = Assets:WaitForChild("UI")
+
 local Plots = workspace:WaitForChild("Plots")
 local PlotSpawns = Plots:WaitForChild("PlotSpawns")
 
@@ -29,8 +31,14 @@ function PlotClaimController:UpdateClaimButtons()
 	end
 end
 
+function PlotClaimController:SetVisibility(SetVisibility: boolean)
+	if PlotClaimGui then
+		PlotClaimGui.Enabled = SetVisibility
+	end
+end
+
 function PlotClaimController:KnitStart()
-	local HouseClaiming = Assets:WaitForChild("HouseClaiming")
+	local HouseClaiming = UI:WaitForChild("HouseClaiming")
 	if HouseClaiming then
 		PlotClaimGui = HouseClaiming:Clone()
 		PlotClaimGui.Parent = Player.PlayerGui
@@ -42,9 +50,8 @@ function PlotClaimController:KnitStart()
 					if response then
 						PlotClaimGui.Enabled = false
 						PlotClaimController:UpdateClaimButtons()
-						if Player.PlayerGui:FindFirstChild("BuildMode") then
-							Player.PlayerGui.BuildMode.Enabled = true
-						end
+						Knit.GetController("BuildClient"):SetVisibility(true)
+						Knit.GetController("MainMenuController"):SetVisibility(true)
 					end
 				end)
 			end

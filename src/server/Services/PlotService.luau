@@ -31,6 +31,20 @@ local PlotService = Knit.CreateService({
 
 -- // Functions \\ --
 
+local function makeTemplateHome(plotSpawn: BasePart)
+	local Plot = Assets.Plot_Template:Clone()
+	Plot.Name = `Plot_DECOY{plotSpawn.Name}`
+	Plot.Parent = PlotsFolder
+	Plot:PivotTo(plotSpawn.CFrame)
+end
+
+local function removeTemplateHome(plotSpawn: BasePart)
+	local plotDecoy = PlotsFolder:FindFirstChild(`Plot_DECOY{plotSpawn.Name}`)
+	if plotDecoy then
+		plotDecoy:Destroy()
+	end
+end
+
 function PlotService.serializePlot(plot: Model)
 	local data = {}
 	local objectsFolder = plot:FindFirstChild("Objects")
@@ -68,7 +82,7 @@ function PlotService.Place(player: Player, name: string, targetCFrame: CFrame): 
 	local playerDataService = Knit.GetService("PlayerData")
 	local PlayerData = playerDataService:GetProfile(player)
 
-	if PlayerData.Money >= objectInConfig.Price then
+	if PlayerData.MoneyData.Money >= objectInConfig.Price then
 	else
 		warn(`{player.Name} does not have enough money to buy {name}!`)
 		return false
@@ -95,7 +109,8 @@ function PlotService.Place(player: Player, name: string, targetCFrame: CFrame): 
 		cameraPoint:Destroy()
 	end
 
-	playerDataService:ChangeData(player, "Money", "subtract", objectInConfig.Price)
+	local _success, _data =
+		playerDataService:ChangeData(player, "MoneyData.Money", "subtract", objectInConfig.Price, "Money")
 	return true
 end
 
@@ -116,7 +131,8 @@ function PlotService.Delete(player: Player, object: Part): boolean
 	actualObject:Destroy()
 
 	local playerDataService = Knit.GetService("PlayerData")
-	playerDataService:ChangeData(player, "Money", "add", objectInConfig.Price)
+	local _success, _data =
+		playerDataService:ChangeData(player, "MoneyData.Money", "add", objectInConfig.Price, "Money")
 
 	return true
 end
@@ -148,6 +164,8 @@ function PlotService.ClaimPlot(player: Player, plotSpawn: BasePart): boolean
 
 	claimedPlots[plotSpawn] = player
 	playerPlots[player] = plotSpawn
+
+	removeTemplateHome(plotSpawn)
 
 	local Plot = Assets.Plot_Template:Clone()
 	Plot.Name = `Plot_{player.Name}`
@@ -199,6 +217,8 @@ function PlotService.UnclaimPlot(player: Player): boolean
 		end
 		plot:Destroy()
 	end
+
+	makeTemplateHome(plotSpawn)
 
 	claimedPlots[plotSpawn] = nil
 	playerPlots[player] = nil
@@ -272,6 +292,12 @@ end
 
 function PlotService.Client:ToggleHouseLock(player: Player)
 	return PlotService.ToggleHouseLock(player)
+end
+
+function PlotService:KnitStart()
+	for _, plotSpawn in pairs(plotSpawns:GetChildren()) do
+		makeTemplateHome(plotSpawn)
+	end
 end
 
 -- // Return \\ --

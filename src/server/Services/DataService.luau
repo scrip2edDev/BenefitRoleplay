@@ -18,7 +18,7 @@ local PlayerData = Knit.CreateService({
 
 local PROFILE_TEMPLATE = require(Modules:WaitForChild("Player_Data_Template"))
 
-local DataKey = game:GetService("RunService"):IsStudio() and "Dev2" or "Prod2"
+local DataKey = game:GetService("RunService"):IsStudio() and "Development" or "Production"
 local PlayerStore = ProfileStore.New(DataKey, PROFILE_TEMPLATE)
 local Profiles: { [Player]: typeof(PlayerStore:StartSessionAsync()) } = {}
 
@@ -32,11 +32,17 @@ function PlayerData:GetProfile(player: Player)
 	return nil
 end
 
-function PlayerData:ChangeData(player: Player, dataKey: string, operation: string, value: number)
+function PlayerData:ChangeData(
+	player: Player,
+	dataKey: string,
+	operation: string,
+	value: string | number,
+	leaderstatToUpdate: string?
+)
 	local profile = Profiles[player]
 	if not profile then
 		warn(`Cannot change data for {player.Name}: Profile not found`)
-		return false
+		return false, nil
 	end
 
 	local data = profile["Data"]
@@ -52,11 +58,11 @@ function PlayerData:ChangeData(player: Player, dataKey: string, operation: strin
 		else
 			if currentTable[key] == nil then
 				warn(`Cannot change data for {player.Name}: Path "{dataKey}" does not exist (missing "{key}")`)
-				return false
+				return false, nil
 			end
 			if type(currentTable[key]) ~= "table" then
 				warn(`Cannot change data for {player.Name}: "{key}" in path "{dataKey}" is not a table`)
-				return false
+				return false, nil
 			end
 			currentTable = currentTable[key]
 		end
@@ -64,49 +70,60 @@ function PlayerData:ChangeData(player: Player, dataKey: string, operation: strin
 
 	if currentTable[finalKey] == nil then
 		warn(`Cannot change data for {player.Name}: Data key "{dataKey}" does not exist`)
-		return false
+		return false, nil
 	end
 
 	local currentValue = currentTable[finalKey]
-	if type(currentValue) ~= "number" then
-		warn(`Cannot change data for {player.Name}: Data key "{dataKey}" is not a number (type: {type(currentValue)})`)
-		return false
-	end
-
+	local currentType = type(currentValue)
 	local newValue = currentValue
 
-	if operation == "add" then
-		newValue = currentValue + value
-	elseif operation == "subtract" then
-		newValue = currentValue - value
-	elseif operation == "multiply" then
-		newValue = currentValue * value
-	elseif operation == "divide" then
-		if value == 0 then
-			warn(`Cannot divide by zero for {player.Name}`)
-			return false
+	if currentType == "number" then
+		local numValue = tonumber(value)
+		if numValue == nil then
+			warn(`Cannot change data for {player.Name}: Cannot convert "{value}" to a number`)
+			return false, nil
 		end
-		newValue = currentValue / value
-	elseif operation == "set" then
-		newValue = value
+
+		if operation == "add" then
+			newValue = currentValue + numValue
+		elseif operation == "subtract" then
+			newValue = currentValue - numValue
+		elseif operation == "multiply" then
+			newValue = currentValue * numValue
+		elseif operation == "divide" then
+			if numValue == 0 then
+				warn(`Cannot divide by zero for {player.Name}`)
+				return false, nil
+			end
+			newValue = currentValue / numValue
+		elseif operation == "set" then
+			newValue = numValue
+		else
+			warn(`Invalid operation "{operation}" for numeric data on {player.Name}`)
+			return false, nil
+		end
+	elseif currentType == "string" then
+		if operation ~= "set" then
+			warn(
+				`Cannot perform operation "{operation}" on string data for {player.Name}. Only "set" is allowed for strings`
+			)
+			return false, nil
+		end
+		newValue = tostring(value)
 	else
-		warn(`Invalid operation "{operation}" for {player.Name}`)
-		return false
+		warn(`Cannot change data for {player.Name}: Data key "{dataKey}" has unsupported type "{currentType}"`)
+		return false, nil
 	end
 
 	currentTable[finalKey] = newValue
-
-	if #keys == 1 then
-		local leaderstats = player:FindFirstChild("leaderstats")
-		if leaderstats then
-			local stat = leaderstats:FindFirstChild(finalKey)
-			if stat and (stat:IsA("IntValue") or stat:IsA("NumberValue")) then
-				stat.Value = newValue
-			end
+	if leaderstatToUpdate then
+		local playerService = Knit.GetService("PlayerService")
+		local leaderstat = playerService:GetLeaderstat(player, leaderstatToUpdate)
+		if leaderstat then
+			leaderstat.Value = newValue
 		end
 	end
-
-	return true
+	return true, newValue
 end
 
 function PlayerData:KnitStart()
