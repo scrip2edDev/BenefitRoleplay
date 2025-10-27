@@ -228,29 +228,34 @@ function PlotService.UnclaimPlot(player: Player): boolean
 end
 
 function PlotService.ToggleHouseLock(player: Player)
-	local PlayerPlot = PlotService:GetPlot(player)
+	local PlayerPlot = PlotService.GetPlot(player)
 	if PlayerPlot then
+		local houseLocked = PlayerPlot:HasTag("LOCKED_HOUSE")
+		if houseLocked then
+			PlayerPlot:RemoveTag("LOCKED_HOUSE")
+			houseLocked = PlayerPlot:HasTag("LOCKED_HOUSE")
+		else
+			PlayerPlot:AddTag("LOCKED_HOUSE")
+			houseLocked = PlayerPlot:HasTag("LOCKED_HOUSE")
+		end
 		for _, Part in pairs(PlayerPlot:GetChildren()) do
 			if Part.Name == "LockableDoor" then
-				if Part.CanCollide == false then
-					Part.CanCollide = true
-				else
-					Part.CanCollide = false
-				end
+				Part.CanCollide = houseLocked
 			end
 		end
 	end
+	return PlayerPlot:HasTag("LOCKED_HOUSE")
 end
 
 function PlotService.TeleportHome(player: Player)
-	local PlayerPlot = PlotService:GetPlot(player)
+	local PlayerPlot = PlotService.GetPlot(player)
 	if PlayerPlot then
 		local character = player.Character or player.CharacterAdded:Wait()
 		character.HumanoidRootPart.CFrame = PlayerPlot.PlotTeleport.CFrame
 	end
 end
 
-function PlotService.Client.GetPlot(_, player: Player): Model | nil
+function PlotService.Client:GetPlot(player: Player): Model | nil
 	return PlotService.GetPlot(player)
 end
 

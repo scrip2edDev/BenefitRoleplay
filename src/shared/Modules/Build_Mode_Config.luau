@@ -21,8 +21,8 @@ return {
 			"Modern Wood Chair",
 			"Office Chair",
 		},
-		["Wall"] = {
-			--[["Dog Picture",
+		--[[ ["Wall"] = {
+			"Dog Picture",
 			"Duck Picture",
 			"Fancy Portraits",
 			"Flower Painting",
@@ -30,8 +30,8 @@ return {
 			"Round Painting",
 			"Shelf",
 			"XL Cool Picture",
-			"XL Picture",]]
-		},
+			"XL Picture",
+		},]]
 		["Decorations"] = {
 			"Air Freshner",
 			"Big Plant",
@@ -53,7 +53,6 @@ return {
 			--"Grey Spike Light",
 			"Laptop",
 			"Large Lamp",
-			--"Lamp",
 			"Light",
 			"TV",
 			--"Yellow Spike Light",
@@ -102,65 +101,65 @@ return {
 		-- Tables
 		["Dinner Table"] = {
 			Model = Furniture:WaitForChild("Dinner Table"),
-			Price = 125,
+			Price = 50,
 		},
 		["Modern Table Large"] = {
 			Model = Furniture:WaitForChild("Modern Table Large"),
-			Price = 100,
+			Price = 65,
 		},
 		["Modern Table Small"] = {
 			Model = Furniture:WaitForChild("Modern Table Small"),
-			Price = 75,
+			Price = 25,
 		},
 		["White Coffee Table"] = {
 			Model = Furniture:WaitForChild("White Coffee Table"),
-			Price = 75,
+			Price = 15,
 		},
 		["Makeup Desk"] = {
 			Model = Furniture:WaitForChild("Makeup Desk"),
-			Price = 50,
+			Price = 35,
 		},
 		["Bed Side Table"] = {
 			Model = Furniture:WaitForChild("Bed Side Table"),
-			Price = 100,
+			Price = 10,
 		},
 		["Coffee Table"] = {
 			Model = Furniture:WaitForChild("Coffee Table"),
-			Price = 75,
+			Price = 20,
 		},
 		["Table"] = {
 			Model = Furniture:WaitForChild("Table"),
-			Price = 75,
+			Price = 35,
 		},
 
 		-- Seating
 		["Dark Wood Chair"] = {
 			Model = Furniture:WaitForChild("Dark Wood Chair"),
-			Price = 125,
+			Price = 20,
 		},
 		["Beige Chair"] = {
 			Model = Furniture:WaitForChild("Beige Chair"),
-			Price = 100,
+			Price = 20,
 		},
 		["Beige Stool"] = {
 			Model = Furniture:WaitForChild("Beige Stool"),
-			Price = 75,
+			Price = 15,
 		},
 		["Large Sofa"] = {
 			Model = Furniture:WaitForChild("Large Sofa"),
-			Price = 75,
+			Price = 65,
 		},
 		["Sofa"] = {
 			Model = Furniture:WaitForChild("Sofa"),
-			Price = 50,
+			Price = 55,
 		},
 		["Modern Wood Chair"] = {
 			Model = Furniture:WaitForChild("Modern Wood Chair"),
-			Price = 100,
+			Price = 25,
 		},
 		["Office Chair"] = {
 			Model = Furniture:WaitForChild("Office Chair"),
-			Price = 75,
+			Price = 35,
 		},
 
 		-- Wall
@@ -204,57 +203,57 @@ return {
 		-- Decorations
 		["Air Freshner"] = {
 			Model = Furniture:WaitForChild("Air Freshner"),
-			Price = 125,
+			Price = 5,
 		},
 		["Big Plant"] = {
 			Model = Furniture:WaitForChild("Big Plant"),
-			Price = 100,
+			Price = 5,
 		},
 		["Books"] = {
 			Model = Furniture:WaitForChild("Books"),
-			Price = 75,
+			Price = 5,
 		},
 		["Bowl"] = {
 			Model = Furniture:WaitForChild("Bowl"),
-			Price = 75,
+			Price = 5,
 		},
 		["Candle"] = {
 			Model = Furniture:WaitForChild("Candle"),
-			Price = 50,
+			Price = 5,
 		},
 		["Plate"] = {
 			Model = Furniture:WaitForChild("Plate"),
-			Price = 100,
+			Price = 5,
 		},
 		["Little Plant"] = {
 			Model = Furniture:WaitForChild("Little Plant"),
-			Price = 75,
+			Price = 5,
 		},
 		["Modern Plant"] = {
 			Model = Furniture:WaitForChild("Modern Plant"),
-			Price = 75,
+			Price = 5,
 		},
 		["Vase"] = {
 			Model = Furniture:WaitForChild("Vase"),
-			Price = 75,
+			Price = 5,
 		},
 
 		-- Bathroom
 		["Washing Machine"] = {
 			Model = Furniture:WaitForChild("Washing Machine"),
-			Price = 125,
+			Price = 30,
 		},
 		["Toilet"] = {
 			Model = Furniture:WaitForChild("Toilet"),
-			Price = 100,
+			Price = 35,
 		},
 		["Sink"] = {
 			Model = Furniture:WaitForChild("Sink"),
-			Price = 75,
+			Price = 30,
 		},
 		["Bath + Shower"] = {
 			Model = Furniture:WaitForChild("Bath + Shower"),
-			Price = 75,
+			Price = 40,
 		},
 
 		-- Electricals
@@ -264,19 +263,19 @@ return {
 		},]]
 		["Laptop"] = {
 			Model = Furniture:WaitForChild("Laptop"),
-			Price = 100,
+			Price = 10,
 		},
 		["Large Lamp"] = {
 			Model = Furniture:WaitForChild("Large Lamp"),
-			Price = 75,
+			Price = 20,
 		},
 		["Light"] = {
 			Model = Furniture:WaitForChild("Light"),
-			Price = 75,
+			Price = 25,
 		},
 		["TV"] = {
 			Model = Furniture:WaitForChild("TV"),
-			Price = 50,
+			Price = 25,
 		},
 		--[[["Yellow Spike Light"] = {
 			Model = Furniture:WaitForChild("Yellow Spike Light"),
@@ -286,55 +285,55 @@ return {
 		-- Floor
 		["Welcome Rug"] = {
 			Model = Furniture:WaitForChild("Welcome Rug"),
-			Price = 125,
+			Price = 15,
 		},
 		["Round Rug"] = {
 			Model = Furniture:WaitForChild("Round Rug"),
-			Price = 100,
+			Price = 25,
 		},
 		["Striped Rug"] = {
 			Model = Furniture:WaitForChild("Striped Rug"),
-			Price = 75,
+			Price = 10,
 		},
 		["Crushed Velvet Rug"] = {
 			Model = Furniture:WaitForChild("Crushed Velvet Rug"),
-			Price = 75,
+			Price = 20,
 		},
 
 		-- Bedroom
 		["Bunk Bed"] = {
 			Model = Furniture:WaitForChild("Bunk Bed"),
-			Price = 125,
+			Price = 55,
 		},
 		["Double Bed"] = {
 			Model = Furniture:WaitForChild("Double Bed"),
-			Price = 100,
+			Price = 65,
 		},
 		["Single Bed"] = {
 			Model = Furniture:WaitForChild("Single Bed"),
-			Price = 75,
+			Price = 50,
 		},
 
 		-- Outside
 		["Outside Bench"] = {
 			Model = Furniture:WaitForChild("Outside Bench"),
-			Price = 100,
+			Price = 25,
 		},
 		["Grill"] = {
 			Model = Furniture:WaitForChild("Grill"),
-			Price = 75,
+			Price = 65,
 		},
 		["Green Bin"] = {
 			Model = Furniture:WaitForChild("Green Bin"),
-			Price = 75,
+			Price = 10,
 		},
 		["Brown Bin"] = {
 			Model = Furniture:WaitForChild("Brown Bin"),
-			Price = 125,
+			Price = 10,
 		},
 		["Drying Rack"] = {
 			Model = Furniture:WaitForChild("Drying Rack"),
-			Price = 100,
+			Price = 15,
 		},
 		["Shed"] = {
 			Model = Furniture:WaitForChild("Shed"),
@@ -346,59 +345,59 @@ return {
 		},
 		["Trampoline"] = {
 			Model = Furniture:WaitForChild("Trampoline"),
-			Price = 50,
+			Price = 75,
 		},
 
 		-- Kitchen
 		["Drawer Counter"] = {
 			Model = Furniture:WaitForChild("Drawer Counter"),
-			Price = 125,
+			Price = 25,
 		},
 		["Microwave"] = {
 			Model = Furniture:WaitForChild("Microwave"),
-			Price = 100,
+			Price = 30,
 		},
 		["Oven"] = {
 			Model = Furniture:WaitForChild("Oven"),
-			Price = 75,
+			Price = 30,
 		},
 		["Half Cupboard Counter"] = {
 			Model = Furniture:WaitForChild("Half Cupboard Counter"),
-			Price = 75,
+			Price = 25,
 		},
 		["Full Cupboard Counter"] = {
 			Model = Furniture:WaitForChild("Full Cupboard Counter"),
-			Price = 50,
+			Price = 25,
 		},
 		["Sink Counter"] = {
 			Model = Furniture:WaitForChild("Sink Counter"),
-			Price = 100,
+			Price = 25,
 		},
 		["Dishrack"] = {
 			Model = Furniture:WaitForChild("Dishrack"),
-			Price = 75,
+			Price = 10,
 		},
 		["Stove Top"] = {
 			Model = Furniture:WaitForChild("Stove Top"),
-			Price = 75,
+			Price = 30,
 		},
 		["Fridge"] = {
 			Model = Furniture:WaitForChild("Fridge"),
-			Price = 125,
+			Price = 30,
 		},
 		["Oven Cupboard"] = {
 			Model = Furniture:WaitForChild("Oven Cupboard"),
-			Price = 100,
+			Price = 30,
 		},
 
 		-- Storage
 		["Chester Drawers"] = {
 			Model = Furniture:WaitForChild("Chester Drawers"),
-			Price = 125,
+			Price = 25,
 		},
 		["Wardrobe"] = {
 			Model = Furniture:WaitForChild("Wardrobe"),
-			Price = 100,
+			Price = 35,
 		},
 	},
 }
