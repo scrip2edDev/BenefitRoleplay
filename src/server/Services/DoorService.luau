@@ -41,7 +41,6 @@ end
 -- // Main \\ --
 
 function DoorService:KnitStart()
-	warn(`{script.Name} is now Running!`)
 	getTagsAndSetupDoors()
 end
 

@@ -17,7 +17,7 @@
         "$path": "src/server/Services"
       },
       "Server": {
-        "$path": "src/server/ServerScripts"
+        "$path": "src/server"
       },
       "ServerPackages": {
         "$path": "ServerPackages"
@@ -26,11 +26,8 @@
 
     "StarterPlayer": {
       "StarterPlayerScripts": {
-        "RealismMod": {
-          "$path": "src/client/RealismMod"
-        },
         "Client": {
-          "$path": "src/client/ClientScripts"
+          "$path": "src/client"
         }
       }
     }
