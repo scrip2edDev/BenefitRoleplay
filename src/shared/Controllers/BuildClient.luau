@@ -10,128 +10,25 @@ local Assets = ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Assets")
 local UI = Assets:WaitForChild("UI")
 
 local ClientPlacer = require(Modules:WaitForChild("ClientPlacer"))
+local ClientDelete = require(Modules:WaitForChild("ClientDelete"))
+local ClientPainter = require(Modules:WaitForChild("ClientPainter"))
 local BuildClient = Knit.CreateController({ Name = "BuildClient" })
 local BuildMode_Template = UI:WaitForChild("BuildMode")
 
 local BuildMode_Config = require(Modules:WaitForChild("Build_Mode_Config"))
 
 local placer = nil
+local painter = nil
+local deleter = nil
 local BuildModeUi = nil
 local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 
 local selectedTool = ""
 local connections = {}
 
-local deleteToolActive = false
-local hoveredObject = nil
-
 -- // Functions \\ --
 
-local function resetHoveredObject()
-	if hoveredObject then
-		local selectionBox = hoveredObject:FindFirstChild("SelectionBox")
-		if selectionBox then
-			selectionBox:Destroy()
-		end
-		hoveredObject = nil
-	end
-end
-
-local function highlightObject(object: Model | BasePart)
-	resetHoveredObject()
-	local selectionBox: SelectionBox = Instance.new("SelectionBox")
-	selectionBox.Parent = object
-	selectionBox.Adornee = object
-	selectionBox.Color3 = Color3.new(0.909804, 0.082353, 0.082353)
-	selectionBox.LineThickness = 0.1
-	hoveredObject = object
-end
-
-local function updateDeleteToolHover()
-	if not deleteToolActive then
-		return
-	end
-
-	local mouse = game.Players.LocalPlayer:GetMouse()
-	local camera = workspace.CurrentCamera
-	local plot = Knit.GetService("PlotService"):GetPlot()
-
-	if not plot then
-		resetHoveredObject()
-		return
-	end
-
-	local ray = camera:ScreenPointToRay(mouse.X, mouse.Y)
-	local params = RaycastParams.new()
-	params.FilterDescendantsInstances = {}
-	params.FilterType = Enum.RaycastFilterType.Include
-
-	local objectsFolder = plot:FindFirstChild("Objects")
-	if objectsFolder then
-		params.FilterDescendantsInstances = objectsFolder:GetDescendants()
-	end
-
-	local result = workspace:Raycast(ray.Origin, ray.Direction * 1000, params)
-
-	if result and result.Instance then
-		local hitPart = result.Instance
-		local objectToDelete = hitPart
-
-		if objectsFolder then
-			while objectToDelete and objectToDelete.Parent ~= objectsFolder do
-				objectToDelete = objectToDelete.Parent
-			end
-		end
-
-		if objectToDelete and objectToDelete ~= hoveredObject then
-			highlightObject(objectToDelete)
-		end
-	else
-		resetHoveredObject()
-	end
-end
-
-local function startDeleteTool()
-	deleteToolActive = true
-	resetHoveredObject()
-
-	connections["DeleteHover"] = game:GetService("RunService").RenderStepped:Connect(function()
-		updateDeleteToolHover()
-	end)
-
-	connections["DeleteClick"] = UserInputService.InputBegan:Connect(function(input, processed)
-		if processed then
-			return
-		end
-
-		local validInput = input.UserInputType == Enum.UserInputType.MouseButton1
-			or (isMobile and input.UserInputType == Enum.UserInputType.Touch)
-
-		if validInput and hoveredObject then
-			local success = Knit.GetService("PlotService"):Delete(hoveredObject)
-			if success then
-				resetHoveredObject()
-			end
-		end
-	end)
-end
-
-local function stopDeleteTool()
-	deleteToolActive = false
-	resetHoveredObject()
-
-	if connections["DeleteHover"] then
-		connections["DeleteHover"]:Disconnect()
-		connections["DeleteHover"] = nil
-	end
-
-	if connections["DeleteClick"] then
-		connections["DeleteClick"]:Disconnect()
-		connections["DeleteClick"] = nil
-	end
-end
-
-local function loadCategoryItems(CategoryName, CategoryData)
+local function loadDecoratingCategoryItems(CategoryName, CategoryData)
 	local Decorating = BuildModeUi:WaitForChild("Decorating")
 	local Template = Decorating.ItemFrame_Template
 	for _, ItemInFrame in pairs(Decorating.ItemFrame:GetChildren()) do
@@ -180,7 +77,7 @@ local function loadCategoryItems(CategoryName, CategoryData)
 	end
 end
 
-local function loadGuiItems()
+local function loadDecoratingGuiItems()
 	local Decorating = BuildModeUi:WaitForChild("Decorating")
 	for CategoryName, CategoryData in pairs(BuildMode_Config.Categories) do
 		local Template = Decorating.Categories.Template
@@ -190,12 +87,12 @@ local function loadGuiItems()
 		Category.Name = CategoryName
 		Category.Text = CategoryName
 		Category.MouseButton1Click:Connect(function()
-			loadCategoryItems(CategoryName, CategoryData)
+			loadDecoratingCategoryItems(CategoryName, CategoryData)
 		end)
 	end
 end
 
-local function unloadGuiItems()
+local function unloadDecoratingGuiItems()
 	local Decorating = BuildModeUi:WaitForChild("Decorating")
 	Decorating.PriceFrame.ItemName.Text = "Item Name"
 	Decorating.PriceFrame.Price.Text = "Price: £-"
@@ -226,13 +123,25 @@ local function unloadGuiItems()
 	end
 end
 
-local function onToolChange(newTool: string?)
-	if placer ~= nil then
+local function cleanupTools()
+	if placer then
 		placer:Destroy()
 		placer = nil
 	end
 
-	stopDeleteTool()
+	if painter then
+		painter:Destroy()
+		painter = nil
+	end
+
+	if deleter then
+		deleter:Destroy()
+		deleter = nil
+	end
+end
+
+local function onToolChange(newTool: string?)
+	cleanupTools()
 
 	BuildModeUi.Decorating.Visible = false
 	BuildModeUi.Painting.Visible = false
@@ -240,17 +149,32 @@ local function onToolChange(newTool: string?)
 	BuildModeUi.ToolBar.Paint.ImageColor3 = Color3.fromRGB(255, 255, 255)
 	BuildModeUi.ToolBar.Delete.ImageColor3 = Color3.fromRGB(255, 255, 255)
 	selectedTool = newTool
-	unloadGuiItems()
+	unloadDecoratingGuiItems()
+
 	if newTool == "Build" then
-		loadGuiItems()
+		loadDecoratingGuiItems()
 		BuildModeUi.Decorating.Visible = true
 		BuildModeUi.ToolBar.Build.ImageColor3 = Color3.fromRGB(52, 52, 52)
 	elseif newTool == "Paint" then
 		BuildModeUi.Painting.Visible = true
 		BuildModeUi.ToolBar.Paint.ImageColor3 = Color3.fromRGB(52, 52, 52)
+
+		local plot = Knit.GetService("PlotService"):GetPlot()
+		local selectedColor = Color3.fromRGB(255, 255, 255)
+
+		painter = ClientPainter.new(plot, selectedColor, function(object, color)
+			local success = Knit.GetService("PlotService"):Paint(object, color)
+			return success
+		end)
 	elseif newTool == "Delete" then
 		BuildModeUi.ToolBar.Delete.ImageColor3 = Color3.fromRGB(52, 52, 52)
-		startDeleteTool()
+
+		local plot = Knit.GetService("PlotService"):GetPlot()
+
+		deleter = ClientDelete.new(plot, function(object)
+			local success = Knit.GetService("PlotService"):Delete(object)
+			return success
+		end)
 	end
 end
 
@@ -288,10 +212,6 @@ function BuildClient:KnitStart()
 		else
 			onToolChange("Delete")
 		end
-	end)
-
-	BuildModeUi.Decorating.Exit.MouseButton1Click:Connect(function()
-		onToolChange()
 	end)
 
 	BuildModeUi.Decorating.BuyFrame.BuyButton.MouseButton1Click:Connect(function()

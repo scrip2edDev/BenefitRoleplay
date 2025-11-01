@@ -60,7 +60,7 @@ local function SendPollResultsToDiscord(PollID: string, PollData: any)
 	local expiredDate = os.date("%Y-%m-%d %H:%M:%S UTC", PollData.ExpiresAt)
 
 	local embed = {
-		title = "📊 Poll Results",
+		title = "📊 Poll Results @everyone",
 		description = string.format("**Question:** %s", PollData.Question),
 		color = 3447003,
 		fields = {
@@ -115,7 +115,7 @@ local function SendPollResultsToDiscord(PollID: string, PollData: any)
 	end)
 
 	if succ then
-		print("Poll results sent to Discord successfully")
+		print("Poll results sent to Discord successfully for poll:", PollID)
 	else
 		warn("Failed to send poll results to Discord:", response)
 	end
@@ -200,7 +200,7 @@ function PollService:GetActivePollsForPlayer(PlayerUserId: number)
 
 		if pollData then
 			local isExpired = self:IsPollExpired(pollID)
-			local hasVoted = pollData.PlayersWhoVoted[tostring(PlayerUserId)] ~= nil
+			local hasVoted = pollData.PlayersWhoVoted[PlayerUserId] ~= nil
 
 			if not isExpired and not hasVoted then
 				table.insert(activePollsList, {
@@ -221,6 +221,7 @@ function PollService:CleanupExpiredPolls()
 	end)
 
 	if not success then
+		warn("Failed to get active polls for cleanup")
 		return
 	end
 
@@ -237,9 +238,15 @@ function PollService:CleanupExpiredPolls()
 					SendPollResultsToDiscord(pollID, pollData)
 
 					pollData.ResultsSent = true
-					pcall(function()
+					local saveSuccess = pcall(function()
 						PollDataStore:SetAsync(pollID, pollData)
 					end)
+
+					if saveSuccess then
+						print("Marked poll as results sent:", pollID)
+					else
+						warn("Failed to mark poll as results sent:", pollID)
+					end
 				end
 			else
 				table.insert(updatedPollsList, pollID)
@@ -247,9 +254,15 @@ function PollService:CleanupExpiredPolls()
 		end
 	end
 
-	pcall(function()
+	local updateSuccess = pcall(function()
 		ActivePollsStore:SetAsync("ActivePolls", updatedPollsList)
 	end)
+
+	if updateSuccess then
+		print("Updated active polls list. Remaining active polls:", #updatedPollsList)
+	else
+		warn("Failed to update active polls list")
+	end
 end
 
 function PollService.Client:RecordAnswer(Player: Player, PollID: string, Answer: string)
@@ -288,8 +301,6 @@ function PollService.Client:RecordAnswer(Player: Player, PollID: string, Answer:
 		PollDataStore:SetAsync(PollID, PollData)
 	end)
 
-	print(PollService:GetPollData(PollID))
-
 	if not success then
 		warn("Failed to save vote:", err)
 		return false
@@ -311,7 +322,7 @@ function PollService:KnitStart()
 		end
 	end)
 
-	local function handleUnVotedPolls(Player: Player)
+	Players.PlayerAdded:Connect(function(Player)
 		local unansweredPolls = PollService:GetActivePollsForPlayer(Player.UserId)
 
 		for _, pollInfo in ipairs(unansweredPolls) do
@@ -321,19 +332,11 @@ function PollService:KnitStart()
 				{ Question = pollInfo.Question, Answers = pollInfo.Answers }
 			)
 		end
-	end
-
-	Players.PlayerAdded:Connect(handleUnVotedPolls)
-	for _, Player: Player in pairs(game.Players:GetPlayers()) do
-		task.spawn(handleUnVotedPolls, Player)
-	end
-
-	task.spawn(function()
-		while true do
-			task.wait(300)
-			PollService:CleanupExpiredPolls()
-		end
 	end)
+
+	while task.wait(300) do
+		PollService:CleanupExpiredPolls()
+	end
 end
 
 -- // Main \\ --

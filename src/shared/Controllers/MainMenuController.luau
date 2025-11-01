@@ -83,10 +83,6 @@ function MainMenuController:KnitStart()
 		end
 	end)
 
-	-- // Money Update \\ --
-
-	handleMoneyUpdate()
-
 	-- // Avatar Topbar Button \\ --
 
 	local Avalog = require(game.Workspace:WaitForChild("Avalog"):WaitForChild("Avalog")) :: any
@@ -97,6 +93,10 @@ function MainMenuController:KnitStart()
 	Avalog:Start()
 
 	avalogModule = Avalog
+
+	-- // Money Update \\ --
+
+	handleMoneyUpdate()
 end
 
 -- // Return \\ --
