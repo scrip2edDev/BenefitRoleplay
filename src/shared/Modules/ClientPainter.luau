@@ -6,6 +6,8 @@ local RunService = game:GetService("RunService")
 local ClientPainter = {}
 ClientPainter.__index = ClientPainter
 
+-- // Main \\ --
+
 function ClientPainter.new(plot, selectedColor, onExitCallback)
 	local self = setmetatable({}, ClientPainter)
 
@@ -15,9 +17,9 @@ function ClientPainter.new(plot, selectedColor, onExitCallback)
 	self.active = true
 	self.hoveredObject = nil
 	self.isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+	self.originalColors = {}
 
 	self.connections = {}
-	self.previewModel = nil
 
 	self:setupConnections()
 
@@ -26,12 +28,8 @@ end
 
 function ClientPainter:SetColor(newColor)
 	self.selectedColor = newColor
-
-	if self.previewModel then
-		self:updatePreviewColor(self.previewModel)
-	end
-
 	if self.hoveredObject then
+		self:updateObjectColors(self.hoveredObject, newColor)
 		local selectionBox = self.hoveredObject:FindFirstChild("PaintSelectionBox")
 		if selectionBox then
 			selectionBox.Color3 = newColor
@@ -39,48 +37,48 @@ function ClientPainter:SetColor(newColor)
 	end
 end
 
+function ClientPainter:storeOriginalColors(object)
+	for _, descendant in pairs(object:GetDescendants()) do
+		if descendant:IsA("BasePart") then
+			self.originalColors[descendant] = descendant.Color
+		end
+	end
+end
+
+function ClientPainter:restoreOriginalColors(object)
+	for _, descendant in pairs(object:GetDescendants()) do
+		if descendant:IsA("BasePart") and self.originalColors[descendant] then
+			descendant.Color = self.originalColors[descendant]
+		end
+	end
+end
+
+function ClientPainter:updateObjectColors(object, color)
+	for _, descendant in pairs(object:GetDescendants()) do
+		if descendant:IsA("BasePart") then
+			descendant.Color = color
+		end
+	end
+end
+
 function ClientPainter:resetHoveredObject()
 	if self.hoveredObject then
+		self:restoreOriginalColors(self.hoveredObject)
+
 		local selectionBox = self.hoveredObject:FindFirstChild("PaintSelectionBox")
 		if selectionBox then
 			selectionBox:Destroy()
 		end
 	end
 
-	if self.previewModel then
-		self.previewModel:Destroy()
-		self.previewModel = nil
-	end
-
 	self.hoveredObject = nil
-end
-
-function ClientPainter:updatePreviewColor(model)
-	for _, descendant in pairs(model:GetDescendants()) do
-		if descendant:IsA("BasePart") then
-			descendant.Color = self.selectedColor
-		end
-	end
-end
-
-function ClientPainter:createPreview(originalObject)
-	if self.previewModel then
-		self.previewModel:Destroy()
-	end
-
-	for _, descendant in pairs(originalObject:GetDescendants()) do
-		if descendant:IsA("BasePart") then
-			descendant.Color = self.selectedColor
-			descendant.CanCollide = false
-			descendant.Anchored = true
-		end
-	end
-
-	self.previewModel = originalObject
+	self.originalColors = {}
 end
 
 function ClientPainter:highlightObject(object)
 	self:resetHoveredObject()
+	self:storeOriginalColors(object)
+	self:updateObjectColors(object, self.selectedColor)
 
 	local selectionBox = Instance.new("SelectionBox")
 	selectionBox.Name = "PaintSelectionBox"
@@ -91,8 +89,6 @@ function ClientPainter:highlightObject(object)
 	selectionBox.SurfaceTransparency = 0.5
 
 	self.hoveredObject = object
-
-	self:createPreview(object)
 end
 
 function ClientPainter:updateHover()
@@ -113,19 +109,9 @@ function ClientPainter:updateHover()
 	params.FilterDescendantsInstances = {}
 	params.FilterType = Enum.RaycastFilterType.Include
 
-	local objectsFolder = self.plot:FindFirstChild("Objects")
-	if objectsFolder then
-		params.FilterDescendantsInstances = objectsFolder:GetDescendants()
-	end
-
-	if self.previewModel then
-		local filterList = params.FilterDescendantsInstances
-		params.FilterDescendantsInstances = {}
-		for _, obj in pairs(filterList) do
-			if obj ~= self.previewModel and not obj:IsDescendantOf(self.previewModel) then
-				table.insert(params.FilterDescendantsInstances, obj)
-			end
-		end
+	local WallsAndFloorsFolder = self.plot:FindFirstChild("WallsAndFloors")
+	if WallsAndFloorsFolder then
+		params.FilterDescendantsInstances = WallsAndFloorsFolder:GetDescendants()
 	end
 
 	local result = workspace:Raycast(ray.Origin, ray.Direction * 1000, params)
@@ -134,8 +120,8 @@ function ClientPainter:updateHover()
 		local hitPart = result.Instance
 		local objectToPaint = hitPart
 
-		if objectsFolder then
-			while objectToPaint and objectToPaint.Parent ~= objectsFolder do
+		if WallsAndFloorsFolder then
+			while objectToPaint and objectToPaint.Parent ~= WallsAndFloorsFolder do
 				objectToPaint = objectToPaint.Parent
 			end
 		end
@@ -192,5 +178,7 @@ function ClientPainter:Destroy()
 
 	self.connections = {}
 end
+
+-- // Return \\ --
 
 return ClientPainter

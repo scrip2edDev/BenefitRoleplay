@@ -1,8 +1,10 @@
 -- // Variables \\ --
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 
+local Knit = require(ReplicatedStorage.Packages.Knit)
 local ClientDelete = {}
 ClientDelete.__index = ClientDelete
 
@@ -105,7 +107,7 @@ function ClientDelete:_setupConnections()
 
 		if validInput and self.hoveredObject then
 			if self.onDeleteCallback then
-				local success = self.onDeleteCallback(self.hoveredObject)
+				local success = Knit.GetService("PlotService"):Delete(self.hoveredObject)
 				if success then
 					self:_resetHoveredObject()
 				end

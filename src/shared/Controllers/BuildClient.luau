@@ -123,6 +123,10 @@ local function unloadDecoratingGuiItems()
 	end
 end
 
+local function loadPaintingGuiItems() end
+
+local function unloadPaintingGuiItems() end
+
 local function cleanupTools()
 	if placer then
 		placer:Destroy()
@@ -150,31 +154,21 @@ local function onToolChange(newTool: string?)
 	BuildModeUi.ToolBar.Delete.ImageColor3 = Color3.fromRGB(255, 255, 255)
 	selectedTool = newTool
 	unloadDecoratingGuiItems()
+	unloadPaintingGuiItems()
 
 	if newTool == "Build" then
 		loadDecoratingGuiItems()
 		BuildModeUi.Decorating.Visible = true
 		BuildModeUi.ToolBar.Build.ImageColor3 = Color3.fromRGB(52, 52, 52)
 	elseif newTool == "Paint" then
+		loadPaintingGuiItems()
 		BuildModeUi.Painting.Visible = true
 		BuildModeUi.ToolBar.Paint.ImageColor3 = Color3.fromRGB(52, 52, 52)
-
-		local plot = Knit.GetService("PlotService"):GetPlot()
-		local selectedColor = Color3.fromRGB(255, 255, 255)
-
-		painter = ClientPainter.new(plot, selectedColor, function(object, color)
-			local success = Knit.GetService("PlotService"):Paint(object, color)
-			return success
-		end)
 	elseif newTool == "Delete" then
 		BuildModeUi.ToolBar.Delete.ImageColor3 = Color3.fromRGB(52, 52, 52)
 
 		local plot = Knit.GetService("PlotService"):GetPlot()
-
-		deleter = ClientDelete.new(plot, function(object)
-			local success = Knit.GetService("PlotService"):Delete(object)
-			return success
-		end)
+		deleter = ClientDelete.new(plot)
 	end
 end
 
@@ -212,6 +206,10 @@ function BuildClient:KnitStart()
 		else
 			onToolChange("Delete")
 		end
+	end)
+
+	BuildModeUi.Decorating.Exit.MouseButton1Click:Connect(function()
+		onToolChange()
 	end)
 
 	BuildModeUi.Decorating.BuyFrame.BuyButton.MouseButton1Click:Connect(function()

@@ -18,6 +18,33 @@ local avalogModule
 
 -- // Functions \\ --
 
+local function formatMoney(amount)
+	local formatted = string.format("%.2f", amount)
+	local int, dec = formatted:match("^([%-]?%d+)%.(%d+)$")
+
+	if not int then
+		return "£" .. formatted
+	end
+
+	local negative = false
+	if int:sub(1, 1) == "-" then
+		negative = true
+		int = int:sub(2)
+	end
+
+	int = int:reverse():gsub("(%d%d%d)", "%1,"):reverse()
+
+	if int:sub(1, 1) == "," then
+		int = int:sub(2)
+	end
+
+	if negative then
+		return "-£" .. int .. "." .. dec
+	else
+		return "£" .. int .. "." .. dec
+	end
+end
+
 local function handleMoneyUpdate()
 	local leaderstats = Player:WaitForChild("leaderstats")
 	local money = leaderstats:WaitForChild("Money")
@@ -25,9 +52,9 @@ local function handleMoneyUpdate()
 	local moneyText = MainMenuUI:WaitForChild("MoneyFrame"):WaitForChild("Money")
 
 	if leaderstats and money and moneyText then
-		moneyText.Text = `£ {money.Value}`
+		moneyText.Text = formatMoney(money.Value)
 		money:GetPropertyChangedSignal("Value"):Connect(function()
-			moneyText.Text = `£ {money.Value}`
+			moneyText.Text = formatMoney(money.Value)
 		end)
 	end
 end
