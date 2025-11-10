@@ -5,8 +5,10 @@ local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Modules = ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Modules")
+local BuildModules = Modules:WaitForChild("BuildingSystem"):WaitForChild("BuildModules")
+
 local Knit = require(ReplicatedStorage.Packages.Knit)
-local PlacementValidator = require(Modules:WaitForChild("PlacementValidator"))
+local PlacementValidator = require(BuildModules:WaitForChild("PlacementValidator"))
 
 local ClientPlacer = {}
 ClientPlacer.__index = ClientPlacer

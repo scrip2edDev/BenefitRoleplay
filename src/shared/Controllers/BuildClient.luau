@@ -8,14 +8,16 @@ local Modules = ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Modules")
 local Assets = ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Assets")
 
 local UI = Assets:WaitForChild("UI")
+local BuildingSystem = Modules:WaitForChild("BuildingSystem")
+local BuildingModules = BuildingSystem:WaitForChild("BuildModules")
 
-local ClientPlacer = require(Modules:WaitForChild("ClientPlacer"))
-local ClientDelete = require(Modules:WaitForChild("ClientDelete"))
-local ClientPainter = require(Modules:WaitForChild("ClientPainter"))
+local ClientPlacer = require(BuildingModules:WaitForChild("ClientPlacer"))
+local ClientDelete = require(BuildingModules:WaitForChild("ClientDelete"))
+local ClientPainter = require(BuildingModules:WaitForChild("ClientPainter"))
 local BuildClient = Knit.CreateController({ Name = "BuildClient" })
 local BuildMode_Template = UI:WaitForChild("BuildMode")
 
-local BuildMode_Config = require(Modules:WaitForChild("Build_Mode_Config"))
+local BuildMode_Config = require(BuildingSystem:WaitForChild("Build_Mode_Config"))
 
 local placer = nil
 local painter = nil
@@ -123,9 +125,48 @@ local function unloadDecoratingGuiItems()
 	end
 end
 
-local function loadPaintingGuiItems() end
+local function loadPaintingGuiItems()
+	local Painting = BuildModeUi:WaitForChild("Painting")
+	local Colours = Painting:WaitForChild("Colours")
+	local Textures = Painting:WaitForChild("Textures")
 
-local function unloadPaintingGuiItems() end
+	local ColourTemplate = Colours:WaitForChild("ColourTemplate")
+	local TextureTemplate = Colours:WaitForChild("TextureTemplate")
+
+	for ColourName, Colour in BuildMode_Config.PaintingSystem.Colours do
+		local ColourTemplateClone = ColourTemplate:Clone()
+		ColourTemplateClone.Parent = Colours:WaitForChild("ScrollingFrame")
+		ColourTemplateClone.Visible = true
+		ColourTemplateClone.BackgroundColor3 = Colour
+		ColourTemplateClone.Name = ColourName
+		ColourTemplateClone.Text = ColourName
+	end
+	for TextureName, Texture in BuildMode_Config.PaintingSystem.Textures do
+		local TextureTemplateClone = TextureTemplate:Clone()
+		TextureTemplateClone.Parent = Textures:WaitForChild("ScrollingFrame")
+		TextureTemplateClone.Visible = true
+		TextureTemplateClone.Image = Texture
+		TextureTemplateClone.Name = TextureName
+		TextureTemplateClone.Text = TextureName
+	end
+end
+
+local function unloadPaintingGuiItems()
+	local Painting = BuildModeUi:WaitForChild("Painting")
+	local Colours = Painting:WaitForChild("Colours")
+	local Textures = Painting:WaitForChild("Textures")
+
+	for _, Colour in pairs(Colours.ScrollingFrame:GetChildren()) do
+		if Colour:IsA("GuiPart") then
+			Colour:Destroy()
+		end
+	end
+	for _, Texture in pairs(Textures.ScrollingFrame:GetChildren()) do
+		if Texture:IsA("GuiPart") then
+			Texture:Destroy()
+		end
+	end
+end
 
 local function cleanupTools()
 	if placer then

@@ -1,6 +1,14 @@
 local Furniture = game:GetService("ReplicatedStorage").Shared.Assets.Furniture
 
 return {
+	["PaintingSystem"] = {
+		["Colours"] = {
+			["White"] = Color3.new(1, 1, 1),
+			["Black"] = Color3.new(0, 0, 0),
+		},
+		["Textures"] = {},
+	},
+
 	["Categories"] = {
 		["Tables"] = {
 			"Dinner Table",

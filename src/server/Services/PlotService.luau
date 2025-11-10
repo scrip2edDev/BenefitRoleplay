@@ -13,9 +13,12 @@ local Assets = Shared:WaitForChild("Assets")
 local Modules = Shared:WaitForChild("Modules")
 local Knit = require(ReplicatedStorage.Packages.Knit)
 
-local PlacementValidator = require(Modules:WaitForChild("PlacementValidator"))
+local BuildingSystem = Modules:WaitForChild("BuildingSystem")
+local BuildModules = BuildingSystem:WaitForChild("BuildModules")
+
+local PlacementValidator = require(BuildModules:WaitForChild("PlacementValidator"))
 local FurnitureFolder = Assets:WaitForChild("Furniture")
-local Build_Mode_Config = require(Modules:WaitForChild("Build_Mode_Config"))
+local Build_Mode_Config = require(BuildingSystem:WaitForChild("Build_Mode_Config"))
 
 local plotSpawns = PlotsFolder:WaitForChild("PlotSpawns")
 local allPlots = plotSpawns:GetChildren()
