@@ -140,6 +140,18 @@ local function loadPaintingGuiItems()
 		ColourTemplateClone.BackgroundColor3 = Colour
 		ColourTemplateClone.Name = ColourName
 		ColourTemplateClone.Text = ColourName
+		ColourTemplateClone.MouseButton1Click:Connect(function()
+			Painting.Visible = false
+
+			local plot = Knit.GetService("PlotService"):GetPlot()
+			painter = ClientPainter.new(plot, Colour, function()
+				Painting.Visible = true
+				if painter then
+					painter:Destroy()
+					painter = nil
+				end
+			end)
+		end)
 	end
 	for TextureName, Texture in BuildMode_Config.PaintingSystem.Textures do
 		local TextureTemplateClone = TextureTemplate:Clone()
